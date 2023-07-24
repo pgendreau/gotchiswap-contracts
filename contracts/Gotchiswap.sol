@@ -160,7 +160,7 @@ contract Gotchiswap is Initializable {
         // transfer gotchi to buyer
         aavegotchi.safeTransferFrom(address(this), msg.sender, gotchi, "");
         // send amount to seller
-        SafeERC20.safeTransferFrom(GHST, address(this), seller, price);
+        SafeERC20.safeTransfer(GHST, seller, price);
         emit concludeSale(msg.sender, gotchi);
     }
 
