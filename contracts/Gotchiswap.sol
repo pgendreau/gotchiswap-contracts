@@ -37,7 +37,6 @@ contract Gotchiswap is Initializable {
     event concludeSale(address indexed buyer, uint256 indexed gotchi);
     event abortSale(address indexed seller, uint256 indexed gotchi);
 
-
     modifier onlyAdmin {
         require(msg.sender == adminAddress);
         _;
@@ -91,7 +90,7 @@ contract Gotchiswap is Initializable {
     ) {
         require(isBuyer(_buyer), "Cannot get offer: No offers found");
 
-        SaleRef storage offer = buyers[_buyer][_index];
+        SaleRef memory offer = buyers[_buyer][_index];
 
         return(offer.seller, offer.id);
     }
@@ -104,7 +103,7 @@ contract Gotchiswap is Initializable {
     ) {
         require(isSeller(_seller), "Cannot get sale: No sales found");
 
-        GotchiSale storage sale = sellers[_seller][_index];
+        GotchiSale memory sale = sellers[_seller][_index];
 
         return(sale.id, sale.gotchi, sale.price, sale.buyer);
     }
@@ -149,7 +148,7 @@ contract Gotchiswap is Initializable {
         address seller = buyers[msg.sender][_index].seller;
         uint256 id = buyers[msg.sender][_index].id;
         uint256 sale_index = getSaleIndex(seller, id);
-        GotchiSale storage sale = sellers[seller][sale_index];
+        GotchiSale memory sale = sellers[seller][sale_index];
 
         uint256 gotchi = sale.gotchi;
         uint256 price = sale.price;
