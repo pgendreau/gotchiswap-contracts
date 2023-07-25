@@ -42,7 +42,7 @@ contract Gotchiswap is Initializable {
 
     uint256 saleId;
 
-    //  state events
+    //  Events
     event newSale(address indexed seller, uint256 indexed gotchi);
     event concludeSale(address indexed buyer, uint256 indexed gotchi);
     event abortSale(address indexed seller, uint256 indexed gotchi);

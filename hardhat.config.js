@@ -23,7 +23,7 @@ module.exports = {
     },
     polygon: {
         url: "https://rpc.ankr.com/polygon",
-      accounts: [process.env.PRIVATE_KEY]
+        accounts: [process.env.PRIVATE_KEY]
     },
     localhost: {
       forking: {
