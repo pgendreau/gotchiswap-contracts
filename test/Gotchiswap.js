@@ -32,8 +32,17 @@ describe("Gotchiswap", function () {
       params: ["0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD"],
     });
 
-    const testAccount = await hre.ethers.getSigner(
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: ["0xE1bCD0f5c6c855ee3452B38E16FeD0b7Cb0CC507"],
+    });
+
+    const testAdmin = await hre.ethers.getSigner(
       "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD"
+    );
+
+    const testUser = await hre.ethers.getSigner(
+      "0xE1bCD0f5c6c855ee3452B38E16FeD0b7Cb0CC507"
     );
 
     const aavegotchi = await hre.ethers.getContractAt(aavegotchi_abi, GotchisAddress);
@@ -55,9 +64,9 @@ describe("Gotchiswap", function () {
     //const currentImplAddress = await upgrades.erc1967.getImplementationAddress(gotchiswap.target);
     //console.log("implementation: ", currentImplAddress);
 
-    await aavegotchi.connect(testAccount).setApprovalForAll(gotchiswap.target, true);
-    await ghst.connect(testAccount).transfer(owner.address, 100000000000000000000n);
-    await ghst.connect(testAccount).approve(gotchiswap.target, MAX_UINT256);
+    await aavegotchi.connect(testAdmin).setApprovalForAll(gotchiswap.target, true);
+    await ghst.connect(testAdmin).transfer(owner.address, 100000000000000000000n);
+    await ghst.connect(testAdmin).approve(gotchiswap.target, MAX_UINT256);
     await ghst.approve(gotchiswap.target, MAX_UINT256);
 
     return {
@@ -68,8 +77,9 @@ describe("Gotchiswap", function () {
         GotchisAddress,
         WearablesAddress,
         AdminAddress,
+        testAdmin,
+        testUser,
         owner,
-        testAccount,
         otherAccount
     };
   }
@@ -81,19 +91,19 @@ describe("Gotchiswap", function () {
       expect(await gotchiswap.adminAddress()).to.equal(AdminAddress);
     });
     it("Should be a fork of mainnet", async function () {
-      const { aavegotchi, testAccount } = await loadFixture(deployGotchiswapFixture);
+      const { aavegotchi, testAdmin } = await loadFixture(deployGotchiswapFixture);
 
-      expect(await aavegotchi.balanceOf(testAccount.address)).to.equal(16);
+      expect(await aavegotchi.balanceOf(testAdmin.address)).to.equal(16);
     });
-    it("Should have approval to spend testAccount gotchis", async function () {
-      const { gotchiswap, aavegotchi, testAccount } = await loadFixture(deployGotchiswapFixture);
+    it("Should have approval to spend testAdmin gotchis", async function () {
+      const { gotchiswap, aavegotchi, testAdmin } = await loadFixture(deployGotchiswapFixture);
 
-      expect(await aavegotchi.isApprovedForAll(testAccount.address, gotchiswap.target)).to.be.true;
+      expect(await aavegotchi.isApprovedForAll(testAdmin.address, gotchiswap.target)).to.be.true;
     });
-    it("Should have approval to spend testAccount GHSTs", async function () {
-      const { gotchiswap, ghst, testAccount } = await loadFixture(deployGotchiswapFixture);
+    it("Should have approval to spend testAdmin GHSTs", async function () {
+      const { gotchiswap, ghst, testAdmin } = await loadFixture(deployGotchiswapFixture);
 
-      expect(await ghst.allowance(testAccount.address, gotchiswap.target)).to.equal(MAX_UINT256);
+      expect(await ghst.allowance(testAdmin.address, gotchiswap.target)).to.equal(MAX_UINT256);
     });
     it("Should have approval to spend owner GHSTs", async function () {
       const { gotchiswap, ghst, owner } = await loadFixture(deployGotchiswapFixture);
@@ -109,21 +119,42 @@ describe("Gotchiswap", function () {
 
   describe("Trades", function () {
     it("Should be able to sell a gotchi to himself", async function () {
-      const { gotchiswap, aavegotchi, owner, testAccount } = await loadFixture(deployGotchiswapFixture);
-      await gotchiswap.connect(testAccount).sellGotchi(4895, "100000000000000000000", testAccount.address);
+      const { gotchiswap, aavegotchi, owner, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).sellGotchi(4895, "100000000000000000000", testAdmin.address);
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(1);
-      expect(await gotchiswap.getBuyerSalesCount(testAccount.address)).to.equal(1);
-      await gotchiswap.connect(testAccount).buyGotchi(0);
+      expect(await gotchiswap.getBuyerSalesCount(testAdmin.address)).to.equal(1);
+      await gotchiswap.connect(testAdmin).buyGotchi(0);
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
     });
     it("Should be able to sell a gotchi to someone else", async function () {
-      const { gotchiswap, aavegotchi, owner, testAccount } = await loadFixture(deployGotchiswapFixture);
-      await gotchiswap.connect(testAccount).sellGotchi(15434, 100000000000000000000n, owner.address);
+      const { gotchiswap, aavegotchi, owner, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).sellGotchi(15434, 100000000000000000000n, owner.address);
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(1);
       expect(await gotchiswap.getBuyerSalesCount(owner.address)).to.equal(1);
       await gotchiswap.buyGotchi(0);
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
       expect(await aavegotchi.balanceOf(owner.address)).to.equal(1);
+    });
+  });
+
+  describe("Admin Functions", function () {
+    it("Should be able to retrieve a gotchi from the contract", async function () {
+      const { gotchiswap, aavegotchi, testUser, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await aavegotchi.connect(testUser).safeTransferFrom(testUser.address, gotchiswap.target, 10356);
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(1);
+      await gotchiswap.connect(testAdmin).withdrawERC721(10356);
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
+      expect(await aavegotchi.ownerOf(10356)).to.equal(testAdmin.address);
+    });
+    it("Should be able to retrieve GHST from the contract", async function () {
+      const { gotchiswap, ghst, testUser, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      const testAdminBalanceBefore = await ghst.balanceOf(testAdmin.address);
+      const testAdminBalanceAfter = testAdminBalanceBefore + 10000000000000000000n;
+      await ghst.connect(testUser).transfer(gotchiswap.target, 10000000000000000000n);
+      expect(await ghst.balanceOf(gotchiswap.target)).to.equal(10000000000000000000n);
+      await gotchiswap.connect(testAdmin).withdrawGHST();
+      expect(await ghst.balanceOf(gotchiswap.target)).to.equal(0);
+      expect(await ghst.balanceOf(testAdmin.address)).to.equal(testAdminBalanceAfter);
     });
   });
 });
