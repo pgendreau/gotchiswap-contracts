@@ -195,10 +195,10 @@ contract Gotchiswap is Initializable {
             _price > 0,
             "Gotchiswap: Price must be greater than 0"
         );
-        // Transfer the Aavegotchi token to the contract
-        aavegotchi.safeTransferFrom(msg.sender, address(this), _gotchi, "");
         // Add the sale to the seller's sales list and the buyer's offers list
         addSale(msg.sender, _gotchi, _price, _buyer);
+        // Transfer the Aavegotchi token to the contract
+        aavegotchi.safeTransferFrom(msg.sender, address(this), _gotchi, "");
         emit newSale(msg.sender, _gotchi);
     }
 
