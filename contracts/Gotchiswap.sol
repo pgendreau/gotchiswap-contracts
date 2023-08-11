@@ -1,32 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 /**
  * @title Gotchiswap
  * @dev A decentralized escrow contract for trading Aavegotchi assets OTC style.
  */
-contract Gotchiswap is Initializable {
-
-    address public ghstAddress;
-    address public aavegotchiAddress;
-    address public wearablesAddress;
+contract Gotchiswap is
+    Initializable,
+    ERC1155Holder,
+    ERC721Holder
+{
     address public adminAddress;
 
-    IERC721 aavegotchi;
-    IERC20 GHST;
+    // test
+    address aavegotchiAddress = 0x86935F11C86623deC8a25696E1C19a8659CbF95d;
+    address GHSTAddress = 0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7;
+
+    enum AssetClass {
+        ERC20,
+        ERC1155,
+        ERC721
+    }
 
     /**
-     * @dev Struct representing a Gotchi/Portal trade.
+     * @dev Struct representing a trade.
      */
-    struct GotchiSale {
+    struct Sale {
         uint256 id;
-        uint256 gotchi;
-        uint256 price;
+        Asset[] assets;
+        Asset[] prices;
         address buyer;
+    }
+
+    /**
+     * @dev Struct representing an asset to trade for or against.
+     */
+    struct Asset {
+        AssetClass class;
+        address addr;
+        uint256 id;
+        uint256 qty;
     }
 
     /**
@@ -37,15 +58,28 @@ contract Gotchiswap is Initializable {
         uint256 id;
     }
 
-    mapping(address => GotchiSale[]) sellers;
+    struct Items {
+        AssetClass[] classes;
+        address[] contracts;
+        uint256[] ids;
+        uint256[] amounts;
+    }
+
+    /**
+     * @dev Map sales to sellers and offers to buyers.
+     */
+    mapping(address => Sale[]) sellers;
     mapping(address => SaleRef[]) buyers;
 
-    uint256 saleId;
+    /**
+     * @dev Global sale ID that gets incremented with each sale.
+     */
+    uint256 private saleId;
 
     //  Events
     event newSale(address indexed seller, uint256 indexed gotchi);
     event concludeSale(address indexed buyer, uint256 indexed gotchi);
-    event abortSale(address indexed seller, uint256 indexed gotchi);
+    //event abortSale(address indexed seller, uint256 indexed gotchi);
 
     /**
      * @dev Modifier that only allows the admin to perform certain functions.
@@ -61,25 +95,13 @@ contract Gotchiswap is Initializable {
     }
 
     /**
-     * @dev Initializes the contract with the necessary addresses.
-     * @param _ghst Address of the GHST ERC20 token.
-     * @param _gotchis Address of the Aavegotchi ERC721 token.
-     * @param _wearables Address of the wearables contract (not used in this version).
+     * @dev Initializes the contract with the admin address.
      * @param _admin Address of the admin who can perform certain actions.
      */
     function initialize(
-        address _ghst,
-        address _gotchis,
-        address _wearables,
         address _admin
     ) initializer external {
-        ghstAddress = _ghst;
-        aavegotchiAddress = _gotchis;
-        wearablesAddress = _wearables;
         adminAddress = _admin;
-
-        aavegotchi = IERC721(aavegotchiAddress);
-        GHST = IERC20(ghstAddress);
     }
 
     /**
@@ -88,6 +110,7 @@ contract Gotchiswap is Initializable {
      */
     function changeAdmin(address _admin) external onlyAdmin {
         require(_admin != address(0), "Gotchiswap: Cannot change admin to an invalid address");
+        require(_admin != adminAddress, "Gotchiswap: Address already set as admin");
         adminAddress = _admin;
     }
 
@@ -102,22 +125,92 @@ contract Gotchiswap is Initializable {
     }
 
     /**
-     * @dev Allows the admin to withdraw an Aavegotchi ERC721 token from the contract.
+     * @dev Allows the admin to withdraw an ERC721 token from the contract.
      * @param _tokenId The ID of the ERC721 token to be withdrawn.
      */
-    function withdrawERC721(uint256 _tokenId) external onlyAdmin {
-        aavegotchi.safeTransferFrom(address(this), adminAddress, _tokenId, "");
+    function withdrawERC721(address _contract, uint256 _tokenId) external onlyAdmin {
+
+        ERC721(_contract).safeTransferFrom(address(this), adminAddress, _tokenId);
     }
 
     /**
-     * @dev Allows the admin to withdraw GHST ERC20 tokens from the contract.
+     * @dev Allows the admin to withdraw ERC20 tokens from the contract.
      */
-    function withdrawGHST() external onlyAdmin {
+    function withdrawERC20(address _contract) external onlyAdmin {
         SafeERC20.safeTransfer(
-            GHST,
+            IERC20(_contract),
             adminAddress,
-            GHST.balanceOf(address(this))
+            IERC20(_contract).balanceOf(address(this))
         );
+    }
+
+    /**
+     * @dev Allows a seller to create a trade for their Aavegotchi with a buyer.
+     * @param _assetContracts tbc
+     * @param _assetIds tbc
+     * @param _assetAmounts tbc
+     * @param _assetClasses tbc
+     * @param _priceContracts tbc
+     * @param _priceIds tbc
+     * @param _priceAmounts tbc
+     * @param _priceClasses tbc
+     * @param _buyer The address of the buyer who can purchase the Aavegotchi token.
+     */
+    function createSale(
+        AssetClass[] memory _assetClasses,
+        address[] memory _assetContracts,
+        uint256[] memory _assetIds,
+        uint256[] memory _assetAmounts,
+        AssetClass[] memory _priceClasses,
+        address[] memory _priceContracts,
+        uint256[] memory _priceIds,
+        uint256[] memory _priceAmounts,
+        address _buyer
+    ) external {
+
+        // Verify for valid input
+
+        Asset[] memory assets = new Asset[](_assetClasses.length);
+        Asset[] memory prices = new Asset[](_priceClasses.length);
+
+        Asset memory asset;
+        Asset memory price;
+
+        for (uint256 i = 0; i < _assetClasses.length; i++) {
+           asset.class = _assetClasses[i];
+           asset.addr = _assetContracts[i];
+           asset.id = _assetIds[i];
+           asset.qty = _assetAmounts[i];
+
+           assets[i] = asset;
+        }
+
+        for (uint256 i = 0; i < _priceClasses.length; i++) {
+           price.class = _priceClasses[i];
+           price.addr = _priceContracts[i];
+           price.id = _priceIds[i];
+           price.qty = _priceAmounts[i];
+
+           prices[i] = price;
+        }
+
+        // Add the sale to the seller's sales list and the buyer's offers list
+        //addSale(msg.sender, assets, prices, _buyer);
+        addSale(
+            msg.sender,
+            assets,
+            prices,
+            _buyer
+        );
+
+        // Transfer the asset list to the contract
+        transferToEscrow(assets);
+
+        //emit newSale(msg.sender, _gotchi);
+    }
+
+    function transferToEscrow(Asset[] memory _assets) private {
+        // transfer assets to contract
     }
 
     /**
@@ -138,26 +231,150 @@ contract Gotchiswap is Initializable {
         return(offer.seller, offer.id);
     }
 
-    /**
-     * @dev Gets the sale made by a seller at a specific index.
-     * @param _seller The address of the seller.
-     * @param _index The index of the sale.
-     * @return id The ID of the sale.
-     * @return gotchi The ID of the Aavegotchi token being sold.
-     * @return price The price of the Aavegotchi token in GHST tokens.
-     * @return buyer The address of the buyer who can purchase the Aavegotchi token.
-     */
-    function getSale(address _seller, uint256 _index) external view returns (
+    function getSale(address _seller, uint256 _index)
+    external
+    view
+    returns (
         uint256,
-        uint256,
-        uint256,
+        AssetClass[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory,
+        AssetClass[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory,
         address
     ) {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
 
-        GotchiSale memory sale = sellers[_seller][_index];
+        Sale memory sale = sellers[_seller][_index];
 
-        return(sale.id, sale.gotchi, sale.price, sale.buyer);
+        Items memory assets;
+        Items memory prices;
+
+        for (uint256 i = 0; i < sale.assets.length; i++) {
+           assets.classes[i] = sale.assets[i].class;
+           assets.contracts[i] = sale.assets[i].addr;
+           assets.ids[i] = sale.assets[i].id;
+           assets.amounts[i] = sale.assets[i].qty;
+        }
+
+        for (uint256 i = 0; i < sale.prices.length; i++) {
+           prices.classes[i] = sale.prices[i].class;
+           prices.contracts[i] = sale.prices[i].addr;
+           prices.ids[i] = sale.prices[i].id;
+           prices.amounts[i] = sale.prices[i].qty;
+        }
+
+        return(
+            sale.id,
+            assets.classes,
+            assets.contracts,
+            assets.ids,
+            assets.amounts,
+            prices.classes,
+            prices.contracts,
+            prices.ids,
+            prices.amounts,
+            sale.buyer
+        );
+    }
+
+    function getSaleId(address _seller, uint256 _index)
+    external
+    view
+    returns (
+        uint256
+    ) {
+        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
+
+        Sale memory sale = sellers[_seller][_index];
+
+        return(
+            sale.id
+        );
+    }
+
+    function getSaleBuyer(address _seller, uint256 _index)
+    external
+    view
+    returns (
+        address
+    ) {
+        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
+
+        Sale memory sale = sellers[_seller][_index];
+
+        return(
+            sale.buyer
+        );
+    }
+
+    function getSaleAssets(address _seller, uint256 _index)
+    external
+    view
+    returns (
+        AssetClass[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
+
+        Sale memory sale = sellers[_seller][_index];
+
+        AssetClass[] memory assetClasses;
+        address[] memory assetContracts;
+        uint256[] memory assetIds;
+        uint256[] memory assetAmounts;
+
+        for (uint256 i = 0; i < sale.assets.length; i++) {
+           assetClasses[i] = sale.assets[i].class;
+           assetContracts[i] = sale.assets[i].addr;
+           assetIds[i] = sale.assets[i].id;
+           assetAmounts[i] = sale.assets[i].qty;
+        }
+
+        return(
+            assetClasses,
+            assetContracts,
+            assetIds,
+            assetAmounts
+        );
+    }
+
+    function getSalePrices(address _seller, uint256 _index)
+    external
+    view
+    returns (
+        AssetClass[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
+
+        Sale memory sale = sellers[_seller][_index];
+
+        AssetClass[] memory priceClasses;
+        address[] memory priceContracts;
+        uint256[] memory priceIds;
+        uint256[] memory priceAmounts;
+
+        for (uint256 i = 0; i < sale.prices.length; i++) {
+           priceClasses[i] = sale.prices[i].class;
+           priceContracts[i] = sale.prices[i].addr;
+           priceIds[i] = sale.prices[i].id;
+           priceAmounts[i] = sale.prices[i].qty;
+        }
+
+        return(
+            priceClasses,
+            priceContracts,
+            priceIds,
+            priceAmounts
+        );
     }
 
     /**
@@ -181,40 +398,21 @@ contract Gotchiswap is Initializable {
     }
 
     /**
-     * @dev Allows a seller to create a trade for their Aavegotchi with a buyer.
-     * @param _gotchi The ID of the Aavegotchi token to be sold.
-     * @param _price The price of the Aavegotchi token in GHST tokens.
-     * @param _buyer The address of the buyer who can purchase the Aavegotchi token.
-     */
-    function sellGotchi(
-        uint256 _gotchi,
-        uint256 _price,
-        address _buyer
-    ) external {
-        require(
-            _price > 0,
-            "Gotchiswap: Price must be greater than 0"
-        );
-        // Add the sale to the seller's sales list and the buyer's offers list
-        addSale(msg.sender, _gotchi, _price, _buyer);
-        // Transfer the Aavegotchi token to the contract
-        aavegotchi.safeTransferFrom(msg.sender, address(this), _gotchi, "");
-        emit newSale(msg.sender, _gotchi);
-    }
-
-    /**
      * @dev Allows a seller to abort their Aavegotchi sale.
      * @param _index The index of the sale to be aborted.
      */
-    function abortGotchiSale(uint256 _index) external {
+    function abortSale(uint256 _index) external {
         require(isSeller(msg.sender), "Gotchiswap: No sales found for the seller");
         // Get the Aavegotchi ID for the sale to be aborted
-        uint256 gotchi = sellers[msg.sender][_index].gotchi;
+        //uint256 gotchi = sellers[msg.sender][_index].gotchi;
+
         // Remove the sale from the seller's sales list
         removeSale(msg.sender, _index);
-        // Transfer the Aavegotchi token back to the seller
-        aavegotchi.safeTransferFrom(address(this), msg.sender, gotchi, "");
-        emit abortSale(msg.sender, gotchi);
+
+        // Transfer back assets to seller
+        //ERC721(aavegotchiAddress).safeTransferFrom(address(this), msg.sender, gotchi, "");
+
+        //emit abortSale(msg.sender, gotchi);
     }
 
     /**
@@ -228,39 +426,26 @@ contract Gotchiswap is Initializable {
         address seller = buyers[msg.sender][_index].seller;
         uint256 id = buyers[msg.sender][_index].id;
         uint256 sale_index = getSaleIndex(seller, id);
-        GotchiSale memory sale = sellers[seller][sale_index];
 
-        uint256 gotchi = sale.gotchi;
-        uint256 price = sale.price;
+        // Retrieve the offer
+        Sale memory sale = sellers[seller][sale_index];
+
+        uint256 gotchi = 0;
+        uint256 price = 0;
 
         // Remove the offer from the buyer's offers list
         removeSale(seller, sale_index);
 
-        // Deposit the GHST amount to the contract
-        SafeERC20.safeTransferFrom(GHST, msg.sender, address(this), price);
-        // Transfer the Aavegotchi token to the buyer
-        aavegotchi.safeTransferFrom(address(this), msg.sender, gotchi, "");
-        // Send the GHST amount to the seller
-        SafeERC20.safeTransfer(GHST, seller, price);
-        emit concludeSale(msg.sender, gotchi);
-    }
+        // Deposit the buyer's assets to the contract
+        //SafeERC20.safeTransferFrom(IERC20(GHSTAddress), msg.sender, address(this), price);
 
-    /**
-     * @dev The ERC721 receiver callback function (for compatibility).
-     */
-    function onERC721Received(
-        address, /* _operator */
-        address, /*  _from */
-        uint256, /*  _tokenId */
-        bytes calldata /* _data */
-    )
-        external
-        pure
-        returns (bytes4)
-    {
-        return bytes4(
-            keccak256("onERC721Received(address,address,uint256,bytes)")
-        );
+        // Transfer the seller's assets to the buyer
+        //ERC721(aavegotchiAddress).safeTransferFrom(address(this), msg.sender, gotchi, "");
+
+        // Send the buyer assets to the seller
+        //SafeERC20.safeTransfer(IERC20(GHSTAddress), seller, price);
+
+        emit concludeSale(msg.sender, gotchi);
     }
 
     /**
@@ -286,22 +471,36 @@ contract Gotchiswap is Initializable {
         revert("Gotchiswap: Sale not found");
     }
 
-    /**
+     /**
      * @dev Private function to add a sale to the seller's sales list and the buyer's offers list.
-     * @param _seller The address of the seller.
-     * @param _gotchi The ID of the Aavegotchi token to be sold.
-     * @param _price The price of the Aavegotchi token in GHST tokens.
-     * @param _buyer The address of the buyer who can purchase the Aavegotchi token.
+     * @param _seller The address of the seller who created the trade.
+     * @param _assets tbc
+     * @param _prices tbc
+     * @param _buyer The address of the buyer who can purchase the assets.
      */
     function addSale(
         address _seller,
-        uint256 _gotchi,
-        uint256 _price,
+        Asset[] memory _assets,
+        Asset[] memory _prices,
         address _buyer
     ) private {
+
         // Add the sale to the seller's sales list
         uint256 id = getSaleId();
-        sellers[_seller].push(GotchiSale(id, _gotchi, _price, _buyer));
+
+        // Create an empty space in the sellers mapping
+        Sale storage sale = sellers[_seller].push();
+
+        // Fill in the values
+        sale.id = id;
+        for (uint256 i = 0; i < _assets.length; i++) {
+           sale.assets.push(_assets[i]);
+        }
+        for (uint256 i = 0; i < _prices.length; i++) {
+           sale.prices.push(_prices[i]);
+        }
+        sale.buyer = _buyer;
+
         // Add a reference to the sale in the buyer's offers list
         buyers[_buyer].push(SaleRef(_seller, id));
     }
