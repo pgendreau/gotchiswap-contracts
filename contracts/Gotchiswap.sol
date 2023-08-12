@@ -203,14 +203,10 @@ contract Gotchiswap is
             _buyer
         );
 
-        // Transfer the asset list to the contract
-        transferToEscrow(assets);
+        // Transfer the seller's assets to the contract
+        transferAssets(msg.sender, address(this), assets);
 
         //emit newSale(msg.sender, _gotchi);
-    }
-
-    function transferToEscrow(Asset[] memory _assets) private {
-        // transfer assets to contract
     }
 
     /**
@@ -281,102 +277,6 @@ contract Gotchiswap is
         );
     }
 
-    function getSaleId(address _seller, uint256 _index)
-    external
-    view
-    returns (
-        uint256
-    ) {
-        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
-
-        Sale memory sale = sellers[_seller][_index];
-
-        return(
-            sale.id
-        );
-    }
-
-    function getSaleBuyer(address _seller, uint256 _index)
-    external
-    view
-    returns (
-        address
-    ) {
-        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
-
-        Sale memory sale = sellers[_seller][_index];
-
-        return(
-            sale.buyer
-        );
-    }
-
-    function getSaleAssets(address _seller, uint256 _index)
-    external
-    view
-    returns (
-        AssetClass[] memory,
-        address[] memory,
-        uint256[] memory,
-        uint256[] memory
-    ) {
-        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
-
-        Sale memory sale = sellers[_seller][_index];
-
-        AssetClass[] memory assetClasses;
-        address[] memory assetContracts;
-        uint256[] memory assetIds;
-        uint256[] memory assetAmounts;
-
-        for (uint256 i = 0; i < sale.assets.length; i++) {
-           assetClasses[i] = sale.assets[i].class;
-           assetContracts[i] = sale.assets[i].addr;
-           assetIds[i] = sale.assets[i].id;
-           assetAmounts[i] = sale.assets[i].qty;
-        }
-
-        return(
-            assetClasses,
-            assetContracts,
-            assetIds,
-            assetAmounts
-        );
-    }
-
-    function getSalePrices(address _seller, uint256 _index)
-    external
-    view
-    returns (
-        AssetClass[] memory,
-        address[] memory,
-        uint256[] memory,
-        uint256[] memory
-    ) {
-        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
-
-        Sale memory sale = sellers[_seller][_index];
-
-        AssetClass[] memory priceClasses;
-        address[] memory priceContracts;
-        uint256[] memory priceIds;
-        uint256[] memory priceAmounts;
-
-        for (uint256 i = 0; i < sale.prices.length; i++) {
-           priceClasses[i] = sale.prices[i].class;
-           priceContracts[i] = sale.prices[i].addr;
-           priceIds[i] = sale.prices[i].id;
-           priceAmounts[i] = sale.prices[i].qty;
-        }
-
-        return(
-            priceClasses,
-            priceContracts,
-            priceIds,
-            priceAmounts
-        );
-    }
-
     /**
      * @dev Gets the number of offers made to a specific buyer.
      * @param _buyer The address of the buyer.
@@ -403,14 +303,14 @@ contract Gotchiswap is
      */
     function abortSale(uint256 _index) external {
         require(isSeller(msg.sender), "Gotchiswap: No sales found for the seller");
-        // Get the Aavegotchi ID for the sale to be aborted
-        //uint256 gotchi = sellers[msg.sender][_index].gotchi;
+        // Get the sale to be aborted
+        Sale memory sale = sellers[msg.sender][_index];
 
         // Remove the sale from the seller's sales list
         removeSale(msg.sender, _index);
 
         // Transfer back assets to seller
-        //ERC721(aavegotchiAddress).safeTransferFrom(address(this), msg.sender, gotchi, "");
+        transferAssets(address(this), msg.sender, sale.assets);
 
         //emit abortSale(msg.sender, gotchi);
     }
@@ -419,7 +319,7 @@ contract Gotchiswap is
      * @dev Allows a buyer to purchase an Aavegotchi from his offers.
      * @param _index The index of the offer to be accepted.
      */
-    function buyGotchi(uint256 _index) external {
+    function buyOffer(uint256 _index) external {
         require(isBuyer(msg.sender), "Gotchiswap: No offers found for the buyer");
 
         // Get the details of the offer to be accepted
@@ -430,22 +330,79 @@ contract Gotchiswap is
         // Retrieve the offer
         Sale memory sale = sellers[seller][sale_index];
 
-        uint256 gotchi = 0;
-        uint256 price = 0;
-
         // Remove the offer from the buyer's offers list
         removeSale(seller, sale_index);
 
-        // Deposit the buyer's assets to the contract
-        //SafeERC20.safeTransferFrom(IERC20(GHSTAddress), msg.sender, address(this), price);
+        // Transfer the buyer assets to the seller
+        transferAssets(msg.sender, seller, sale.prices);
 
         // Transfer the seller's assets to the buyer
-        //ERC721(aavegotchiAddress).safeTransferFrom(address(this), msg.sender, gotchi, "");
+        transferAssets(address(this), msg.sender, sale.assets);
 
-        // Send the buyer assets to the seller
-        //SafeERC20.safeTransfer(IERC20(GHSTAddress), seller, price);
+        //emit concludeSale(msg.sender, gotchi);
+    }
 
-        emit concludeSale(msg.sender, gotchi);
+    function transferAssets(address _from, address _to, Asset[] memory _assets) private {
+        // transfer assets to contract
+        for (uint256 i = 0; i < _assets.length; i++) {
+            if (_assets[i].class == AssetClass.ERC721) {
+                transferERC721(
+                    _from,
+                    _to,
+                    _assets[i].addr,
+                    _assets[i].id
+                );
+            } else if (_assets[i].class == AssetClass.ERC1155) {
+                transferERC1155(
+                    _from,
+                    _to,
+                    _assets[i].addr,
+                    _assets[i].id,
+                    _assets[i].qty
+                );
+            } else if (_assets[i].class == AssetClass.ERC20) {
+                transferERC20(
+                    _from,
+                    _to,
+                    _assets[i].addr,
+                    _assets[i].qty
+                );
+            }
+        }
+    }
+
+    function transferERC721(
+        address from,
+        address to,
+        address tokenAddress,
+        uint256 tokenId
+    ) private {
+        ERC721(tokenAddress).safeTransferFrom(from, to, tokenId, "");
+    }
+
+    function transferERC1155(
+        address from,
+        address to,
+        address tokenAddress,
+        uint256 tokenId,
+        uint256 amount
+    ) private {
+        ERC1155(tokenAddress).safeTransferFrom(
+            from,
+            to,
+            tokenId,
+            amount,
+            "0x01"
+        );
+    }
+
+    function transferERC20(
+        address from,
+        address to,
+        address tokenAddress,
+        uint256 amount
+    ) private {
+        SafeERC20.safeTransferFrom(IERC20(tokenAddress), from, to, amount);
     }
 
     /**
@@ -569,4 +526,5 @@ contract Gotchiswap is
         }
         return false;
     }
+
 }
