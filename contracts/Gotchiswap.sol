@@ -77,9 +77,9 @@ contract Gotchiswap is
     uint256 private saleId;
 
     //  Events
-    event newSale(address indexed seller, uint256 indexed gotchi);
-    event concludeSale(address indexed buyer, uint256 indexed gotchi);
-    //event abortSale(address indexed seller, uint256 indexed gotchi);
+    event CreateSale(address indexed seller, Asset[] assets, Asset[] prices, address indexed _buyer);
+    event ConcludeSale(address indexed buyer, Sale sale);
+    event AbortSale(address indexed seller, Sale sale);
 
     /**
      * @dev Modifier that only allows the admin to perform certain functions.
@@ -206,7 +206,7 @@ contract Gotchiswap is
         // Transfer the seller's assets to the contract
         transferAssets(msg.sender, address(this), assets);
 
-        //emit newSale(msg.sender, _gotchi);
+        emit CreateSale(msg.sender, assets, prices, _buyer);
     }
 
     /**
@@ -312,14 +312,14 @@ contract Gotchiswap is
         // Transfer back assets to seller
         transferAssets(address(this), msg.sender, sale.assets);
 
-        //emit abortSale(msg.sender, gotchi);
+        emit AbortSale(msg.sender, sale);
     }
 
     /**
      * @dev Allows a buyer to purchase an Aavegotchi from his offers.
      * @param _index The index of the offer to be accepted.
      */
-    function buyOffer(uint256 _index) external {
+    function concludeSale(uint256 _index) external {
         require(isBuyer(msg.sender), "Gotchiswap: No offers found for the buyer");
 
         // Get the details of the offer to be accepted
@@ -339,7 +339,7 @@ contract Gotchiswap is
         // Transfer the seller's assets to the buyer
         transferAssets(address(this), msg.sender, sale.assets);
 
-        //emit concludeSale(msg.sender, gotchi);
+        emit ConcludeSale(msg.sender, sale);
     }
 
     function transferAssets(address _from, address _to, Asset[] memory _assets) private {
