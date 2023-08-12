@@ -282,7 +282,7 @@ contract Gotchiswap is
      * @param _buyer The address of the buyer.
      * @return The number of sales made by the buyer.
      */
-    function getBuyerSalesCount(address _buyer) external view returns (uint256) {
+    function getBuyerOffersCount(address _buyer) external view returns (uint256) {
         require(isBuyer(_buyer), "Gotchiswap: No sales found for the buyer");
         return buyers[_buyer].length;
     }
