@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+// debug
+//import "hardhat/console.sol";
+
 /**
  * @title Gotchiswap
  * @dev A decentralized escrow contract for trading Aavegotchi assets OTC style.
@@ -19,10 +22,6 @@ contract Gotchiswap is
     ERC721Holder
 {
     address public adminAddress;
-
-    // test
-    address aavegotchiAddress = 0x86935F11C86623deC8a25696E1C19a8659CbF95d;
-    address GHSTAddress = 0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7;
 
     enum AssetClass {
         ERC20,
@@ -249,14 +248,47 @@ contract Gotchiswap is
         Items memory assets;
         Items memory prices;
 
+        assets.classes = new AssetClass[](sale.assets.length);
+        assets.contracts = new address[](sale.assets.length);
+        assets.ids = new uint256[](sale.assets.length);
+        assets.amounts = new uint256[](sale.assets.length);
+
+        prices.classes = new AssetClass[](sale.prices.length);
+        prices.contracts = new address[](sale.prices.length);
+        prices.ids = new uint256[](sale.prices.length);
+        prices.amounts = new uint256[](sale.prices.length);
+
+
+        // debug
+        //console.log("sale assets length: ", sale.assets.length);
+
         for (uint256 i = 0; i < sale.assets.length; i++) {
+
+           // debug
+           //console.log("i: ", i);
+           //console.log("class: ", uint8(sale.assets[i].class));
+           //console.log("addr: ", sale.assets[i].addr);
+           //console.log("id: ", sale.assets[i].id);
+           //console.log("qty: ", sale.assets[i].qty);
+
            assets.classes[i] = sale.assets[i].class;
            assets.contracts[i] = sale.assets[i].addr;
            assets.ids[i] = sale.assets[i].id;
            assets.amounts[i] = sale.assets[i].qty;
         }
 
+        // debug
+        //console.log("sale prices length: ", sale.prices.length);
+
         for (uint256 i = 0; i < sale.prices.length; i++) {
+
+           // debug
+           //console.log("i: ", i);
+           //console.log("class: ", uint8(sale.prices[i].class));
+           //console.log("addr: ", sale.prices[i].addr);
+           //console.log("id: ", sale.prices[i].id);
+           //console.log("qty: ", sale.prices[i].qty);
+
            prices.classes[i] = sale.prices[i].class;
            prices.contracts[i] = sale.prices[i].addr;
            prices.ids[i] = sale.prices[i].id;
