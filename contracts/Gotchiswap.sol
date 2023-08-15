@@ -125,11 +125,23 @@ contract Gotchiswap is
 
     /**
      * @dev Allows the admin to withdraw an ERC721 token from the contract.
+     * @param _contract The address of the contract for the ERC721 tokens to withdraw.
      * @param _tokenId The ID of the ERC721 token to be withdrawn.
      */
     function withdrawERC721(address _contract, uint256 _tokenId) external onlyAdmin {
 
-        ERC721(_contract).safeTransferFrom(address(this), adminAddress, _tokenId);
+        ERC721(_contract).safeTransferFrom(address(this), adminAddress, _tokenId, "");
+    }
+
+    /**
+     * @dev Allows the admin to withdraw ERC1155 tokens from the contract.
+     * @param _contract The address of the contract for the ERC1155 tokens to withdraw.
+     * @param _tokenId The ID of the ERC1155 tokens to be withdrawn.
+     * @param _amount The amount of tokens to be withdrawn.
+     */
+    function withdrawERC721(address _contract, uint256 _tokenId, uint256 _amount) external onlyAdmin {
+
+        ERC1155(_contract).safeTransferFrom(address(this), adminAddress, _tokenId, _amount, "");
     }
 
     /**
@@ -168,6 +180,30 @@ contract Gotchiswap is
     ) external {
 
         // Verify for valid input
+        require(
+            _assetClasses.length > 0,
+            "Gotchiswap: Assets list cannot be empty"
+        );
+        require(
+            _priceClasses.length > 0,
+            "Gotchiswap: Prices list cannot be empty"
+        );
+        require(
+            _assetClasses.length == _assetContracts.length &&
+            _assetClasses.length == _assetIds.length &&
+            _assetClasses.length == _assetAmounts.length,
+            "Gotchiswap: Assets parameters length should all be the same"
+        );
+        require(
+            _priceClasses.length == _priceContracts.length &&
+            _priceClasses.length == _priceIds.length &&
+            _priceClasses.length == _priceAmounts.length,
+            "Gotchiswap: prices parameters length should all be the same"
+        );
+        require(
+            _buyer != address(0),
+            "Gotchiswap: Invalid buyer address"
+        );
 
         Asset[] memory assets = new Asset[](_assetClasses.length);
         Asset[] memory prices = new Asset[](_priceClasses.length);
@@ -194,13 +230,7 @@ contract Gotchiswap is
         }
 
         // Add the sale to the seller's sales list and the buyer's offers list
-        //addSale(msg.sender, assets, prices, _buyer);
-        addSale(
-            msg.sender,
-            assets,
-            prices,
-            _buyer
-        );
+        addSale(msg.sender, assets, prices, _buyer);
 
         // Transfer the seller's assets to the contract
         transferAssets(msg.sender, address(this), assets);
@@ -375,9 +405,22 @@ contract Gotchiswap is
     }
 
     function transferAssets(address _from, address _to, Asset[] memory _assets) private {
-        // transfer assets to contract
+
+        require(
+            _to != address(0),
+            "Gotchiswap: Invalid destination address"
+        );
+
         for (uint256 i = 0; i < _assets.length; i++) {
+            require(
+                _assets[i].addr != address(0),
+                "Gotchiswap: Invalid contract address"
+            );
             if (_assets[i].class == AssetClass.ERC721) {
+                require(
+                    _assets[i].qty == 1,
+                    "Gotchiswap: Amount for ERC721 token must be 1"
+                );
                 transferERC721(
                     _from,
                     _to,
@@ -393,6 +436,10 @@ contract Gotchiswap is
                     _assets[i].qty
                 );
             } else if (_assets[i].class == AssetClass.ERC20) {
+                require(
+                    _assets[i].id == 0,
+                    "Gotchiswap: Id for ERC20 must be set to 0"
+                );
                 transferERC20(
                     _from,
                     _to,
@@ -460,7 +507,7 @@ contract Gotchiswap is
         revert("Gotchiswap: Sale not found");
     }
 
-     /**
+    /**
      * @dev Private function to add a sale to the seller's sales list and the buyer's offers list.
      * @param _seller The address of the seller who created the trade.
      * @param _assets tbc
