@@ -403,12 +403,12 @@
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
+        "name": "seller",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "id",
         "type": "uint256"
       }
     ],
@@ -432,52 +432,52 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "id",
         "type": "uint256"
       },
       {
         "internalType": "enum Gotchiswap.AssetClass[]",
-        "name": "",
+        "name": "assetClasses",
         "type": "uint8[]"
       },
       {
         "internalType": "address[]",
-        "name": "",
+        "name": "assetContracts",
         "type": "address[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "",
+        "name": "assetIds",
         "type": "uint256[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "",
+        "name": "assetAmounts",
         "type": "uint256[]"
       },
       {
         "internalType": "enum Gotchiswap.AssetClass[]",
-        "name": "",
+        "name": "priceClasses",
         "type": "uint8[]"
       },
       {
         "internalType": "address[]",
-        "name": "",
+        "name": "priceContracts",
         "type": "address[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "",
+        "name": "priceIds",
         "type": "uint256[]"
       },
       {
         "internalType": "uint256[]",
-        "name": "",
+        "name": "priceAmounts",
         "type": "uint256[]"
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "buyer",
         "type": "address"
       }
     ],
@@ -660,6 +660,34 @@
         "internalType": "address",
         "name": "_contract",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdrawERC1155",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_contract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
       }
     ],
     "name": "withdrawERC20",
