@@ -191,32 +191,40 @@ contract Gotchiswap is
             "Gotchiswap: Prices parameters length should all be the same"
         );
 
+        // create fixed length arrays in memory
         Asset[] memory assets = new Asset[](_assetClasses.length);
         Asset[] memory prices = new Asset[](_priceClasses.length);
 
         for (uint256 i = 0; i < _assetClasses.length; i++) {
+            // create a new instance at each loop
             Asset memory asset;
 
+            // fill in the values
             asset.class = _assetClasses[i];
             asset.addr = _assetContracts[i];
             asset.id = _assetIds[i];
             asset.qty = _assetAmounts[i];
 
+            // save it
             assets[i] = asset;
         }
 
         for (uint256 i = 0; i < _priceClasses.length; i++) {
+            // create a new instance at each loop
             Asset memory price;
 
+            // fill in the values
             price.class = _priceClasses[i];
             price.addr = _priceContracts[i];
             price.id = _priceIds[i];
             price.qty = _priceAmounts[i];
 
+            // save it
             prices[i] = price;
         }
 
         // Add the sale to the seller's sales list and the buyer's offers list
+        // pass the in-memory objects to be stored in the state variable
         addSale(msg.sender, assets, prices, _buyer);
 
         // Transfer the seller's assets to the contract
@@ -502,6 +510,7 @@ contract Gotchiswap is
 
     /**
      * @dev Private function to add a sale to the seller's sales list and the buyer's offers list.
+     *      Converts memory to storage so arrays need to be fixed-sized.
      * @param _seller The address of the seller who created the trade.
      * @param _assets Assets offered to trade by the seller
      * @param _prices Assets to be accepted from the buyer in exchange
