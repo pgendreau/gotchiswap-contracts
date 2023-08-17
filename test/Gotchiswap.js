@@ -96,28 +96,22 @@ describe("Gotchiswap", function () {
       const { gotchiswap, AdminAddress } = await loadFixture(deployGotchiswapFixture);
       expect(await gotchiswap.adminAddress()).to.equal(AdminAddress);
     });
+  });
+  describe("Test environment", function () {
     it("Should be a fork of mainnet", async function () {
       const { aavegotchi, testAdmin } = await loadFixture(deployGotchiswapFixture);
       expect(await aavegotchi.ownerOf(4895)).to.equal(testAdmin.address);
     });
-    it("Should have approval to spend testAdmin gotchis", async function () {
-      const { gotchiswap, aavegotchi, testAdmin } = await loadFixture(deployGotchiswapFixture);
+    it("Should have set all approvals", async function () {
+      const { gotchiswap, aavegotchi, ghst, gltr, testAdmin, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await aavegotchi.isApprovedForAll(testAdmin.address, gotchiswap.target)).to.be.true;
-    });
-    it("Should have approval to spend owner GHSTs", async function () {
-      const { gotchiswap, ghst, owner } = await loadFixture(deployGotchiswapFixture);
+      expect(await ghst.allowance(testAdmin.address, gotchiswap.target)).to.equal(MAX_UINT256);
       expect(await ghst.allowance(owner.address, gotchiswap.target)).to.equal(MAX_UINT256);
-    });
-    it("Should have approval to spend owner GLTR", async function () {
-      const { gotchiswap, gltr, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await gltr.allowance(owner.address, gotchiswap.target)).to.equal(MAX_UINT256);
     });
-    it("Should have sent 100 GHST to owner", async function () {
-      const { gotchiswap, ghst, owner } = await loadFixture(deployGotchiswapFixture);
+    it("Should have set up owner with tokens", async function () {
+      const { gotchiswap, ghst, gltr, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await ghst.balanceOf(owner.address)).to.equal(100000000000000000000n);
-    });
-    it("Should have sent 1000000 GLTR to owner", async function () {
-      const { gotchiswap, gltr, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await gltr.balanceOf(owner.address)).to.equal(1000000000000000000000000n);
     });
   });

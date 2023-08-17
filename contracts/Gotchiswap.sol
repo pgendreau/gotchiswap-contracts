@@ -279,6 +279,7 @@ contract Gotchiswap is
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
         Sale memory sale = sellers[_seller][_index];
 
+        // need to group assets into Items to not blow through the stack
         Items memory assets;
         Items memory prices;
 
