@@ -5,7 +5,8 @@ const {
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 const aavegotchi_abi = require('./aavegotchi.json');
-const ghst_abi = require('./ghst.json');
+const erc20_abi = require('./erc20.json');
+const wearables_abi = require('./wearables.json');
 //const { ethers, upgrades } = require("hardhat");
 
 const hre = require("hardhat");
@@ -20,6 +21,7 @@ describe("Gotchiswap", function () {
   async function deployGotchiswapFixture() {
 
     const GhstAddress = "0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7";
+    const GltrAddress = "0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc";
     const AavegotchiAddress = "0x86935F11C86623deC8a25696E1C19a8659CbF95d";
     const WearablesAddress = "0x58de9AaBCaeEC0f69883C94318810ad79Cc6a44f";
     const AdminAddress = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
@@ -46,7 +48,9 @@ describe("Gotchiswap", function () {
     );
 
     const aavegotchi = await hre.ethers.getContractAt(aavegotchi_abi, AavegotchiAddress);
-    const ghst = await hre.ethers.getContractAt(ghst_abi, GhstAddress);
+    const wearables = await hre.ethers.getContractAt(wearables_abi, WearablesAddress);
+    const ghst = await hre.ethers.getContractAt(erc20_abi, GhstAddress);
+    const gltr = await hre.ethers.getContractAt(erc20_abi, GltrAddress);
 
     const Gotchiswap = await hre.ethers.getContractFactory("Gotchiswap");
     const gotchiswap = await hre.upgrades.deployProxy(
@@ -57,18 +61,26 @@ describe("Gotchiswap", function () {
     await gotchiswap.waitForDeployment();
 
     const currentImplAddress = await upgrades.erc1967.getImplementationAddress(gotchiswap.target);
-    console.log("implementation: ", currentImplAddress);
+    //console.log("implementation: ", currentImplAddress);
 
+    // setup approvals
     await aavegotchi.connect(testAdmin).setApprovalForAll(gotchiswap.target, true);
-    await ghst.connect(testAdmin).transfer(owner.address, 100000000000000000000n);
     await ghst.connect(testAdmin).approve(gotchiswap.target, MAX_UINT256);
+
+    // setup owner with tokens
+    await ghst.connect(testAdmin).transfer(owner.address, 100000000000000000000n);
+    await gltr.connect(testAdmin).transfer(owner.address, 1000000000000000000000000n);
     await ghst.approve(gotchiswap.target, MAX_UINT256);
+    await gltr.approve(gotchiswap.target, MAX_UINT256);
 
     return {
         gotchiswap,
         aavegotchi,
         ghst,
+        gltr,
+        wearables,
         GhstAddress,
+        GltrAddress,
         AavegotchiAddress,
         WearablesAddress,
         AdminAddress,
@@ -92,17 +104,21 @@ describe("Gotchiswap", function () {
       const { gotchiswap, aavegotchi, testAdmin } = await loadFixture(deployGotchiswapFixture);
       expect(await aavegotchi.isApprovedForAll(testAdmin.address, gotchiswap.target)).to.be.true;
     });
-    it("Should have approval to spend testAdmin GHSTs", async function () {
-      const { gotchiswap, ghst, testAdmin } = await loadFixture(deployGotchiswapFixture);
-      expect(await ghst.allowance(testAdmin.address, gotchiswap.target)).to.equal(MAX_UINT256);
-    });
     it("Should have approval to spend owner GHSTs", async function () {
       const { gotchiswap, ghst, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await ghst.allowance(owner.address, gotchiswap.target)).to.equal(MAX_UINT256);
     });
+    it("Should have approval to spend owner GLTR", async function () {
+      const { gotchiswap, gltr, owner } = await loadFixture(deployGotchiswapFixture);
+      expect(await gltr.allowance(owner.address, gotchiswap.target)).to.equal(MAX_UINT256);
+    });
     it("Should have sent 100 GHST to owner", async function () {
       const { gotchiswap, ghst, owner } = await loadFixture(deployGotchiswapFixture);
       expect(await ghst.balanceOf(owner.address)).to.equal(100000000000000000000n);
+    });
+    it("Should have sent 1000000 GLTR to owner", async function () {
+      const { gotchiswap, gltr, owner } = await loadFixture(deployGotchiswapFixture);
+      expect(await gltr.balanceOf(owner.address)).to.equal(1000000000000000000000000n);
     });
   });
 
@@ -195,6 +211,60 @@ describe("Gotchiswap", function () {
       expect(await ghst.balanceOf(owner.address)).to.equal(0);
       expect(await ghst.balanceOf(testAdmin.address)).to.equal(balanceBefore + 100000000000000000000n);
     });
+    it("Should be able to trade bundles", async function () {
+      const {
+          gotchiswap,
+          aavegotchi,
+          ghst,
+          gltr,
+          wearables,
+          GhstAddress,
+          GltrAddress,
+          AavegotchiAddress,
+          WearablesAddress,
+          owner,
+          testAdmin
+      } = await loadFixture(deployGotchiswapFixture);
+      const ghstBalanceBefore = await ghst.balanceOf(testAdmin.address);
+      const gltrBalanceBefore = await gltr.balanceOf(testAdmin.address);
+      const ghstBalanceAfter = ghstBalanceBefore + 100000000000000000000n;
+      const gltrBalanceAfter = gltrBalanceBefore + 1000000000000000000000000n;
+      const wearableBalanceBefore = await wearables.balanceOf(testAdmin.address, 350);
+      const wearableBalanceAfter = wearableBalanceBefore - 1n;
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
+      expect(await wearables.balanceOf(gotchiswap.target, 350)).to.equal(0);
+      await gotchiswap.connect(testAdmin).createSale(
+        [2, 1],
+        [AavegotchiAddress, WearablesAddress],
+        [4895, 350],
+        [1, 1],
+        [0, 0],
+        [GhstAddress, GltrAddress],
+        [0, 0],
+        [100000000000000000000n, 1000000000000000000000000n],
+        owner.address
+      );
+
+      // check assets have transferred to contract
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(1);
+      expect(await aavegotchi.ownerOf(4895)).to.equal(gotchiswap.target);
+      expect(await wearables.balanceOf(gotchiswap.target, 350)).to.equal(1);
+      // check sale has registered for both buyer and seller
+      expect(await gotchiswap.getSellerSalesCount(testAdmin.address)).to.equal(1);
+      expect(await gotchiswap.getBuyerOffersCount(owner.address)).to.equal(1);
+      await gotchiswap.concludeSale(0);
+      // check assets has transferred to buyer
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
+      expect(await wearables.balanceOf(gotchiswap.target, 350)).to.equal(0);
+      expect(await aavegotchi.balanceOf(owner.address)).to.equal(1);
+      expect(await aavegotchi.ownerOf(4895)).to.equal(owner.address);
+      expect(await wearables.balanceOf(owner.address, 350)).to.equal(1);
+      // check money has transferred to seller
+      expect(await ghst.balanceOf(owner.address)).to.equal(0);
+      expect(await gltr.balanceOf(owner.address)).to.equal(0);
+      expect(await ghst.balanceOf(testAdmin.address)).to.equal(ghstBalanceAfter);
+      expect(await gltr.balanceOf(testAdmin.address)).to.equal(gltrBalanceAfter);
+    });
     it("Should be able to abort a non settled trade", async function () {
       const {
         gotchiswap,
@@ -243,6 +313,20 @@ describe("Gotchiswap", function () {
       // check that gotchi has been sent to admin
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
       expect(await aavegotchi.ownerOf(10356)).to.equal(testAdmin.address);
+    });
+    it("Should be able to retrieve ERC1155 from the contract (only admin)", async function () {
+      const { gotchiswap, wearables, WearablesAddress, testUser, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      const testAdminBalanceBefore = await wearables.balanceOf(testAdmin.address, 292);
+      const testAdminBalanceAfter = testAdminBalanceBefore + 1n;
+      await wearables.connect(testUser).safeTransferFrom(testUser.address, gotchiswap.target, 292, 1, "0x");
+      expect(await wearables.balanceOf(gotchiswap.target, 292)).to.equal(1);
+      // check that only admin can retrieve gotchis
+      await expect(gotchiswap.rescueERC1155(WearablesAddress, 292, 1))
+        .to.be.revertedWith('Gotchiswap: Only the admin can perform this action');
+      await gotchiswap.connect(testAdmin).rescueERC1155(WearablesAddress, 292, 1);
+      // check that gotchi has been sent to admin
+      expect(await wearables.balanceOf(gotchiswap.target, 292)).to.equal(0);
+      expect(await wearables.balanceOf(testAdmin.address, 292)).to.equal(testAdminBalanceAfter);
     });
     it("Should be able to retrieve ERC20 from the contract (only admin)", async function () {
       const { gotchiswap, ghst, GhstAddress, testUser, testAdmin } = await loadFixture(deployGotchiswapFixture);
