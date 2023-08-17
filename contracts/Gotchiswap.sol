@@ -121,7 +121,7 @@ contract Gotchiswap is
      * @param _contract The address of the contract for the ERC721 tokens to withdraw.
      * @param _tokenId The ID of the ERC721 token to be withdrawn.
      */
-    function withdrawERC721(address _contract, uint256 _tokenId) external onlyAdmin {
+    function rescueERC721(address _contract, uint256 _tokenId) external onlyAdmin {
         transferERC721(address(this), adminAddress, _contract, _tokenId);
     }
 
@@ -131,7 +131,7 @@ contract Gotchiswap is
      * @param _tokenId The ID of the ERC1155 tokens to be withdrawn.
      * @param _amount The amount of tokens to be withdrawn.
      */
-    function withdrawERC1155(address _contract, uint256 _tokenId, uint256 _amount) external onlyAdmin {
+    function rescueERC1155(address _contract, uint256 _tokenId, uint256 _amount) external onlyAdmin {
         transferERC1155(address(this), adminAddress, _contract, _tokenId, _amount);
     }
 
@@ -140,7 +140,7 @@ contract Gotchiswap is
      * @param _contract The address of the ERC20 contract.
      * @param _amount The amount of tokens to be withdrawn.
      */
-    function withdrawERC20(address _contract, uint256 _amount) external onlyAdmin {
+    function rescueERC20(address _contract, uint256 _amount) external onlyAdmin {
         transferERC20(address(this), adminAddress, _contract, _amount);
     }
 
@@ -460,12 +460,20 @@ contract Gotchiswap is
         address _tokenAddress,
         uint256 _amount
     ) private {
-        SafeERC20.safeTransferFrom(
-            IERC20(_tokenAddress),
-            _from,
-            _to,
-            _amount
-        );
+        if (_from == address(this)) {
+            SafeERC20.safeTransfer(
+                IERC20(_tokenAddress),
+                _to,
+                _amount
+            );
+        } else {
+            SafeERC20.safeTransferFrom(
+                IERC20(_tokenAddress),
+                _from,
+                _to,
+                _amount
+            );
+        }
     }
 
     /**
