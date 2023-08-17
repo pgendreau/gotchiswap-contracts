@@ -33,7 +33,7 @@ module.exports = {
       forking: {
         //url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_API_KEY}`,
         url: `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        //blockNumber: 45494291
+        blockNumber: 46397958
       }
     }
   },
