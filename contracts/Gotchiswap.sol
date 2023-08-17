@@ -194,10 +194,9 @@ contract Gotchiswap is
         Asset[] memory assets = new Asset[](_assetClasses.length);
         Asset[] memory prices = new Asset[](_priceClasses.length);
 
-        Asset memory asset;
-        Asset memory price;
-
         for (uint256 i = 0; i < _assetClasses.length; i++) {
+            Asset memory asset;
+
             asset.class = _assetClasses[i];
             asset.addr = _assetContracts[i];
             asset.id = _assetIds[i];
@@ -207,6 +206,8 @@ contract Gotchiswap is
         }
 
         for (uint256 i = 0; i < _priceClasses.length; i++) {
+            Asset memory price;
+
             price.class = _priceClasses[i];
             price.addr = _priceContracts[i];
             price.id = _priceIds[i];
@@ -502,8 +503,8 @@ contract Gotchiswap is
     /**
      * @dev Private function to add a sale to the seller's sales list and the buyer's offers list.
      * @param _seller The address of the seller who created the trade.
-     * @param _assets tbc
-     * @param _prices tbc
+     * @param _assets Assets offered to trade by the seller
+     * @param _prices Assets to be accepted from the buyer in exchange
      * @param _buyer The address of the buyer who can purchase the assets.
      */
     function addSale(
