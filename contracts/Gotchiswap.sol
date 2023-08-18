@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 // Importing debugging utilities (optional)
 // import "hardhat/console.sol";
@@ -18,6 +19,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  */
 contract Gotchiswap is
     Initializable,
+    ReentrancyGuardUpgradeable,
     ERC1155Holder,
     ERC721Holder
 {
@@ -99,6 +101,7 @@ contract Gotchiswap is
     function initialize(
         address _admin
     ) initializer external {
+        __ReentrancyGuard_init();
         adminAddress = _admin;
     }
 
@@ -257,7 +260,7 @@ contract Gotchiswap is
         uint256[] memory _priceIds,
         uint256[] memory _priceAmounts,
         address _buyer
-    ) external {
+    ) external nonReentrant {
         // Verify for valid input
         require(_buyer != address(0), "Gotchiswap: Invalid buyer address");
         require(_assetClasses.length > 0, "Gotchiswap: Assets list cannot be empty");
@@ -429,7 +432,7 @@ contract Gotchiswap is
      * @dev Allows a seller to abort their Aavegotchi sale.
      * @param _index The index of the sale to be aborted.
      */
-    function abortSale(uint256 _index) external {
+    function abortSale(uint256 _index) external nonReentrant {
         require(isSeller(msg.sender), "Gotchiswap: No sales found for the seller");
         // Get the sale to be aborted
         Sale memory sale = sellers[msg.sender][_index];
@@ -447,7 +450,7 @@ contract Gotchiswap is
      * @dev Allows a buyer to accept a specific offer made by a seller.
      * @param _index The index of the offer to be accepted.
      */
-    function concludeSale(uint256 _index) external {
+    function concludeSale(uint256 _index) external nonReentrant {
         require(isBuyer(msg.sender), "Gotchiswap: No offers found for the buyer");
 
         // Get the details of the offer to be accepted
@@ -494,11 +497,14 @@ contract Gotchiswap is
             );
 
             if (_assets[i].class == AssetClass.ERC721) {
+                // Transfer ERC721 token
                 require(_assets[i].qty == 1, "Gotchiswap: Amount for ERC721 token must be 1");
                 transferERC721(_from, _to, _assets[i].addr, _assets[i].id);
             } else if (_assets[i].class == AssetClass.ERC1155) {
+                // Transfer ERC1155 token
                 transferERC1155(_from, _to, _assets[i].addr, _assets[i].id, _assets[i].qty);
             } else if (_assets[i].class == AssetClass.ERC20) {
+                // Transfer ERC20 token
                 require(_assets[i].id == 0, "Gotchiswap: Id for ERC20 must be set to 0");
                 transferERC20(_from, _to, _assets[i].addr, _assets[i].qty);
             }
