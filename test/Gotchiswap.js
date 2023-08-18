@@ -73,6 +73,8 @@ describe("Gotchiswap", function () {
     await ghst.approve(gotchiswap.target, MAX_UINT256);
     await gltr.approve(gotchiswap.target, MAX_UINT256);
 
+    await gotchiswap.connect(testAdmin).disableAllowlist();
+
     return {
         gotchiswap,
         aavegotchi,

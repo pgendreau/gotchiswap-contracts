@@ -68,6 +68,12 @@ contract Gotchiswap is
     // Global sale ID that gets incremented with each sale.
     uint256 saleId;
 
+    // Global allowlist status (enabled by default)
+    bool public allowlistDisabled;
+
+    // Allowlist status of token contracts
+    mapping(address => bool) contractsAllowlist;
+
     // Events
     event CreateSale(address indexed seller, Asset[] assets, Asset[] prices, address indexed _buyer);
     event ConcludeSale(address indexed buyer, Sale sale);
@@ -94,6 +100,81 @@ contract Gotchiswap is
         address _admin
     ) initializer external {
         adminAddress = _admin;
+    }
+
+    /**
+     * @dev Checks if a given assets contract address is allowed for trading.
+     * @param _contract The address of the contract to check.
+     * @return bool Returns true if the contract is allowed, false otherwise.
+     */
+    function isContractAllowed(address _contract) external view returns (bool) {
+        return contractsAllowlist[_contract];
+    }
+
+    /**
+     * @dev Allows a specific token contract to be traded.
+     * @param _contract The address of the contract to be allowed.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Reverts if the contract is already allowed.
+     */
+    function allowContract(address _contract) public onlyAdmin {
+        require(!contractsAllowlist[_contract], "Gotchiswap: Address already allowed");
+        contractsAllowlist[_contract] = true;
+    }
+
+    /**
+     * @dev Allows multiple contract addresses to be added to the allowlist.
+     * @param _contracts An array of contract addresses to be allowed.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Calls the 'allowContract' function for each contract address.
+     */
+    function allowContracts(address[] calldata _contracts) external onlyAdmin {
+        for (uint256 i = 0; i < _contracts.length; i++) {
+            allowContract(_contracts[i]);
+        }
+    }
+
+    /**
+     * @dev Disallows a specific token contract to be traded.
+     * @param _contract The address of the contract to be disallowed.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Reverts if the contract is already disallowed.
+     */
+    function disallowContract(address _contract) public onlyAdmin {
+        require(contractsAllowlist[_contract], "Gotchiswap: Address already disallowed");
+        contractsAllowlist[_contract] = false;
+    }
+
+    /**
+     * @dev Remove multiple token contract addresses from the allowlist.
+     * @param _contracts An array of contract addresses to be disallowed.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Calls the 'disallowContract' function for each contract address.
+     */
+    function disallowContracts(address[] calldata _contracts) external onlyAdmin {
+        for (uint256 i = 0; i < _contracts.length; i++) {
+            disallowContract(_contracts[i]);
+        }
+    }
+
+    /**
+     * @dev Disables the allowlist, allowing any token contracts to be traded.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Reverts if the allowlist is already disabled.
+     */
+    function disableAllowlist() external onlyAdmin {
+        require(!allowlistDisabled, "Gotchiswap: Allowlist already disabled");
+        allowlistDisabled = true;
+    }
+
+    /**
+     * @dev Enables the allowlist, allowing only permitted token contracts to be traded.
+     * @notice Only the admin is allowed to call this function.
+     * @dev Reverts if the allowlist is already enabled.
+     */
+    function enableAllowlist() external onlyAdmin {
+        require(allowlistDisabled, "Gotchiswap: Allowlist already enabled");
+        allowlistDisabled = false;
     }
 
     /**
@@ -180,12 +261,14 @@ contract Gotchiswap is
         require(_buyer != address(0), "Gotchiswap: Invalid buyer address");
         require(_assetClasses.length > 0, "Gotchiswap: Assets list cannot be empty");
         require(_priceClasses.length > 0, "Gotchiswap: Prices list cannot be empty");
-        require(_assetClasses.length == _assetContracts.length &&
+        require(
+            _assetClasses.length == _assetContracts.length &&
             _assetClasses.length == _assetIds.length &&
             _assetClasses.length == _assetAmounts.length,
             "Gotchiswap: Assets parameters length should all be the same"
         );
-        require(_priceClasses.length == _priceContracts.length &&
+        require(
+            _priceClasses.length == _priceContracts.length &&
             _priceClasses.length == _priceIds.length &&
             _priceClasses.length == _priceAmounts.length,
             "Gotchiswap: Prices parameters length should all be the same"
@@ -390,7 +473,10 @@ contract Gotchiswap is
      * @dev Private function to transfer a list of assets from one address to another.
      * @param _from The address from which the assets will be transferred.
      * @param _to The address to which the assets will be transferred.
-     * @param _assets The list of assets to be transferred.
+     * @param _assets An array of Asset struct representing the assets to be transferred.
+     * @dev Reverts if the destination address is invalid.
+     * @dev Reverts if any of the asset contracts have an invalid address.
+     * @dev Reverts if a contract address is not in the allowlist and the allowlist is not disabled.
      */
     function transferAssets(address _from, address _to, Asset[] memory _assets) private {
 
@@ -399,6 +485,12 @@ contract Gotchiswap is
         for (uint256 i = 0; i < _assets.length; i++) {
 
             require(_assets[i].addr != address(0), "Gotchiswap: Invalid contract address");
+
+            // Ensure that the contract address is either in the allowlist or allowlist is disabled
+            require(
+                contractsAllowlist[_assets[i].addr] || allowlistDisabled,
+                "Gotchiswap: Contract address in not allowed"
+            );
 
             if (_assets[i].class == AssetClass.ERC721) {
                 require(_assets[i].qty == 1, "Gotchiswap: Amount for ERC721 token must be 1");
