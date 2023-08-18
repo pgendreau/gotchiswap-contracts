@@ -116,6 +116,10 @@ describe("Gotchiswap", function () {
       expect(await ghst.balanceOf(owner.address)).to.equal(100000000000000000000n);
       expect(await gltr.balanceOf(owner.address)).to.equal(1000000000000000000000000n);
     });
+    it("Should have disabled allowlist globally", async function () {
+      const { gotchiswap } = await loadFixture(deployGotchiswapFixture);
+      expect(await gotchiswap.allowlistDisabled()).to.be.true;
+    });
   });
 
   describe("Trades", function () {
@@ -296,7 +300,85 @@ describe("Gotchiswap", function () {
       expect(await aavegotchi.ownerOf(4895)).to.equal(testAdmin.address);
     });
   });
-  describe("Admin Functions", function () {
+  describe("Allowlist functions", function () {
+    it("Should be able to enable allowlist globally", async function () {
+      const { gotchiswap, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).enableAllowlist();
+      expect(await gotchiswap.allowlistDisabled()).to.be.false;
+    });
+    it("Should not be able to trade when allowlist is enabled and empty", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).enableAllowlist();
+      await expect(gotchiswap.connect(testAdmin).createSale(
+        [2],
+        [AavegotchiAddress],
+        [4895],
+        [1],
+        [0],
+        [GhstAddress],
+        [0],
+        [100000000000000000000n],
+        testAdmin.address
+      )).to.be.revertedWith('Gotchiswap: Contract address in not allowed');
+    });
+    it("Should be able to trade when allowlist is enabled and contracts are added", async function () {
+      const { gotchiswap, aavegotchi, AavegotchiAddress, GhstAddress, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).enableAllowlist();
+      await gotchiswap.connect(testAdmin).allowContracts([AavegotchiAddress, GhstAddress]);
+      expect(await gotchiswap.isContractAllowed(AavegotchiAddress)).to.be.true;
+      expect(await gotchiswap.isContractAllowed(GhstAddress)).to.be.true;
+      await gotchiswap.connect(testAdmin).createSale(
+        [2],
+        [AavegotchiAddress],
+        [4895],
+        [1],
+        [0],
+        [GhstAddress],
+        [0],
+        [100000000000000000000n],
+        testAdmin.address
+      );
+      expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(1);
+      expect(await aavegotchi.ownerOf(4895)).to.equal(gotchiswap.target);
+    });
+    it("Should be able to disallow contracts after enabling them", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, testAdmin } = await loadFixture(deployGotchiswapFixture);
+      await gotchiswap.connect(testAdmin).enableAllowlist();
+      await gotchiswap.connect(testAdmin).allowContract(AavegotchiAddress);
+      expect(await gotchiswap.isContractAllowed(AavegotchiAddress)).to.be.true;
+      await gotchiswap.connect(testAdmin).disallowContract(AavegotchiAddress);
+      expect(await gotchiswap.isContractAllowed(AavegotchiAddress)).to.be.false;
+    });
+    it("Should not be possible to allow null address", async function () {
+      const { gotchiswap, testAdmin } = await loadFixture(deployGotchiswapFixture);
+        await expect(gotchiswap.connect(testAdmin).allowContract(ADDRESS_ZERO))
+            .to.be.revertedWith(
+            'Gotchiswap: Invalid contract address'
+        );
+    });
+    it("Should be unable to manage allowlist if not admin", async function () {
+      const { gotchiswap, AavegotchiAddress, testAdmin } = await loadFixture(deployGotchiswapFixture);
+        await expect(gotchiswap.enableAllowlist()).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+        await expect(gotchiswap.disableAllowlist()).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+        await expect(gotchiswap.allowContract(AavegotchiAddress)).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+        await expect(gotchiswap.allowContracts([AavegotchiAddress])).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+        await expect(gotchiswap.disallowContract(AavegotchiAddress)).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+        await expect(gotchiswap.disallowContracts([AavegotchiAddress])).to.be.revertedWith(
+            'Gotchiswap: Only the admin can perform this action'
+        );
+    });
+  });
+  describe("Admin functions", function () {
     it("Should be able to retrieve ERC721 from the contract (only admin)", async function () {
       const { gotchiswap, aavegotchi, AavegotchiAddress, testUser, testAdmin } = await loadFixture(deployGotchiswapFixture);
       await aavegotchi.connect(testUser).safeTransferFrom(testUser.address, gotchiswap.target, 10356);

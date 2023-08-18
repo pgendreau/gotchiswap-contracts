@@ -115,9 +115,10 @@ contract Gotchiswap is
      * @dev Allows a specific token contract to be traded.
      * @param _contract The address of the contract to be allowed.
      * @notice Only the admin is allowed to call this function.
-     * @dev Reverts if the contract is already allowed.
+     * @dev Reverts if the contract is zero address or already allowed.
      */
     function allowContract(address _contract) public onlyAdmin {
+        require(_contract != address(0), "Gotchiswap: Invalid contract address");
         require(!contractsAllowlist[_contract], "Gotchiswap: Address already allowed");
         contractsAllowlist[_contract] = true;
     }
