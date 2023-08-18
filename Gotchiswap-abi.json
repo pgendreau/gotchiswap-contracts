@@ -292,6 +292,45 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_contract",
+        "type": "address"
+      }
+    ],
+    "name": "allowContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_contracts",
+        "type": "address[]"
+      }
+    ],
+    "name": "allowContracts",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "allowlistDisabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_admin",
         "type": "address"
       }
@@ -363,6 +402,46 @@
       }
     ],
     "name": "createSale",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "disableAllowlist",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_contract",
+        "type": "address"
+      }
+    ],
+    "name": "disallowContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_contracts",
+        "type": "address[]"
+      }
+    ],
+    "name": "disallowContracts",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "enableAllowlist",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -514,6 +593,25 @@
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_contract",
+        "type": "address"
+      }
+    ],
+    "name": "isContractAllowed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
