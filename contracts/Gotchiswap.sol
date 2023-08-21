@@ -181,6 +181,7 @@ contract Gotchiswap is
     /**
      * @dev Allows the admin to transfer admin rights to another address.
      * @param _admin The new admin address.
+     * @dev Reverts if admin address is invalid or the same.
      */
     function changeAdmin(address _admin) external onlyAdmin {
         require(_admin != address(0), "Gotchiswap: Cannot change admin to an invalid address");
@@ -246,6 +247,7 @@ contract Gotchiswap is
      * @param _priceIds IDs of the price tokens.
      * @param _priceAmounts Amounts of the price tokens.
      * @param _buyer The address of the buyer.
+     * @dev Reverts for arry of 0 length.
      */
     function createSale(
         AssetClass[] memory _assetClasses,
@@ -323,6 +325,7 @@ contract Gotchiswap is
      * @param _index The index of the offer.
      * @return seller The address of the seller who made the offer.
      * @return id The ID of the offer.
+     * @dev Reverts if buyer has no offers.
      */
     function getOffer(address _buyer, uint256 _index) external view returns (
         address seller,
@@ -347,6 +350,7 @@ contract Gotchiswap is
      * @return priceIds IDs of the price tokens.
      * @return priceAmounts Amounts of the price toekns.
      * @return buyer The address of the buyer.
+     * @dev Reverts if seller has no active sales.
      */
     function getSale(address _seller, uint256 _index) external view returns (
         uint256 id,
@@ -409,6 +413,7 @@ contract Gotchiswap is
      * @dev Gets the number of offers made to a specific buyer.
      * @param _buyer The address of the buyer.
      * @return The number of active offers available to a buyer.
+     * @dev Reverts if buyer has no offers.
      */
     function getBuyerOffersCount(address _buyer) external view returns (uint256) {
         require(isBuyer(_buyer), "Gotchiswap: No offers found for the buyer");
@@ -419,6 +424,7 @@ contract Gotchiswap is
      * @dev Gets the number of offers made by a specific seller.
      * @param _seller The address of the seller.
      * @return The number of active sales made by the seller.
+     * @dev Reverts if seller has no active sales.
      */
     function getSellerSalesCount(address _seller) external view returns (uint256) {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
@@ -428,9 +434,14 @@ contract Gotchiswap is
     /**
      * @dev Allows a seller to abort their Aavegotchi sale.
      * @param _index The index of the sale to be aborted.
+     * @dev Reverts if seller has no active sales.
+     * @dev Reverts if _index is invalid.
      */
     function abortSale(uint256 _index) external {
         require(isSeller(msg.sender), "Gotchiswap: No sales found for the seller");
+        require(_index < sellers[msg.sender].length,
+            "Gotchiswap: Index out of bound, no sale found"
+        );
         // Get the sale to be aborted
         Sale memory sale = sellers[msg.sender][_index];
 
@@ -446,9 +457,14 @@ contract Gotchiswap is
     /**
      * @dev Allows a buyer to accept a specific offer made by a seller.
      * @param _index The index of the offer to be accepted.
+     * @dev Reverts if buyer has no offers.
+     * @dev Reverts if _index is invalid.
      */
     function concludeSale(uint256 _index) external {
         require(isBuyer(msg.sender), "Gotchiswap: No offers found for the buyer");
+        require(_index < buyers[msg.sender].length,
+            "Gotchiswap: Index out of bound, no offer found"
+        );
 
         // Get the details of the offer to be accepted
         address seller = buyers[msg.sender][_index].seller;
@@ -478,6 +494,7 @@ contract Gotchiswap is
      * @dev Reverts if the destination address is invalid.
      * @dev Reverts if any of the asset contracts have an invalid address.
      * @dev Reverts if a contract address is not in the allowlist and the allowlist is not disabled.
+     * @dev Reverts if ERC20 tokenId is not 0 or ERC721 amount is not 1.
      */
     function transferAssets(address _from, address _to, Asset[] memory _assets) private {
 
@@ -641,6 +658,7 @@ contract Gotchiswap is
      * @dev Private function to remove a sale from the seller's sales list and the buyer's offers list.
      * @param _seller The address of the seller.
      * @param _index The index of the sale to be removed.
+     * @dev Reverts if seller has no active sales.
      */
     function removeSale(address _seller, uint256 _index ) private {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");

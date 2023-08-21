@@ -353,6 +353,9 @@ describe("Gotchiswap", function () {
         1
       );
       expect(await gotchiswap.getBuyerOffersCount(owner.address)).to.equal(1);
+      // test revert on bad index
+      await expect(gotchiswap.connect(testAdmin).abortSale(1))
+        .to.be.revertedWith("Gotchiswap: Index out of bound, no sale found");
       await gotchiswap.connect(testAdmin).abortSale(0);
       // check that the gotchi is returned to the owner
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
