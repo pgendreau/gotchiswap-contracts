@@ -310,12 +310,12 @@ contract Gotchiswap is
             prices[i] = price;
         }
 
+        // Transfer the seller's assets to the contract first
+        transferAssets(msg.sender, address(this), assets);
+
         // Add the sale to the seller's sales list and the buyer's offers list
         // pass the in-memory objects to be stored in the state variable
         addSale(msg.sender, assets, prices, _buyer);
-
-        // Transfer the seller's assets to the contract
-        transferAssets(msg.sender, address(this), assets);
 
         emit CreateSale(msg.sender, assets, prices, _buyer);
     }
