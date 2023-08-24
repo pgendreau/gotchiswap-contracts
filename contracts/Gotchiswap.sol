@@ -416,7 +416,7 @@ contract Gotchiswap is
      * @param _index The index of the sale in the seller's sale list.
      * @dev The index will typically come from getOffer result
      */
-    function getSaleId(address _seller, uint256 _index) external view returns (uint256) {
+    function getSaleId(address _seller, uint256 _index) external view returns (uint256 id) {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
         require(_index < sellers[_seller].length,
             "Gotchiswap: Index out of bound, no sale found"

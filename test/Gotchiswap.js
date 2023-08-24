@@ -427,7 +427,7 @@ describe("Gotchiswap", function () {
       expect(index).to.equal(1n);
       const sale = await gotchiswap.getSale(testAdmin.address, index);
       expect(sale.id).to.equal(2n);
-      //console.log(sale);
+      expect(sale.assetIds[0]).to.equal(9121);
     });
   });
   describe("Allowlist functions", function () {
