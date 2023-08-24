@@ -190,11 +190,6 @@ describe("Gotchiswap", function () {
         1
       );
 
-      // retrieve the sale from the mapping
-      const sale = await gotchiswap.getSale(testAdmin.address, 0);
-      // should expect
-      //console.log("sale: ", sale);
-
       // test wrong offer index
       await expect(gotchiswap.connect(testAdmin).concludeSale(1))
         .to.be.revertedWith('Gotchiswap: Index out of bound, no offer found');
@@ -365,6 +360,74 @@ describe("Gotchiswap", function () {
         gotchisBefore
       );
       expect(await aavegotchi.ownerOf(4895)).to.equal(testAdmin.address);
+    });
+  });
+  describe("External view functions", function () {
+    it("Should be able to retrieve sale details from buyer", async function () {
+      const {
+        gotchiswap,
+        GhstAddress,
+        AavegotchiAddress,
+        owner,
+        testAdmin,
+      } = await loadFixture(deployGotchiswapFixture);
+      // create dummy sales
+      await gotchiswap
+        .connect(testAdmin)
+        .createSale(
+          [2],
+          [AavegotchiAddress],
+          [4895],
+          [1],
+          [0],
+          [GhstAddress],
+          [0],
+          [100000000000000000000n],
+          testAdmin.address
+        );
+      await gotchiswap
+        .connect(testAdmin)
+        .createSale(
+          [2],
+          [AavegotchiAddress],
+          [15434],
+          [1],
+          [0],
+          [GhstAddress],
+          [0],
+          [100000000000000000000n],
+          testAdmin.address
+        );
+      await gotchiswap
+        .connect(testAdmin)
+        .createSale(
+          [2],
+          [AavegotchiAddress],
+          [9121],
+          [1],
+          [0],
+          [GhstAddress],
+          [0],
+          [100000000000000000000n],
+          owner.address
+        );
+
+      // abort a sale to have id > index for seller
+      await gotchiswap.connect(testAdmin).abortSale(0);
+
+      // check sales have registered for both buyer and seller
+      expect(await gotchiswap.getSellerSalesCount(testAdmin.address)).to.equal(2);
+      expect(await gotchiswap.getBuyerOffersCount(owner.address)).to.equal(1);
+
+      // retrieve sale details
+      const { seller, id } = await gotchiswap.getOffer(owner.address, 0);
+      expect(seller).to.equal(testAdmin.address);
+      expect(id).to.equal(2n);
+      const index = await gotchiswap.getSaleIndex(testAdmin.address, id);
+      expect(index).to.equal(1n);
+      const sale = await gotchiswap.getSale(testAdmin.address, index);
+      expect(sale.id).to.equal(2n);
+      //console.log(sale);
     });
   });
   describe("Allowlist functions", function () {
