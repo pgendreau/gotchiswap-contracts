@@ -191,8 +191,9 @@ describe("Gotchiswap", function () {
       );
 
       // test wrong offer index
-      await expect(gotchiswap.connect(testAdmin).concludeSale(1))
-        .to.be.revertedWith('Gotchiswap: Index out of bound, no offer found');
+      await expect(
+        gotchiswap.connect(testAdmin).concludeSale(1)
+      ).to.be.revertedWith("Gotchiswap: Index out of bound, no offer found");
       // complete the trade
       await gotchiswap.connect(testAdmin).concludeSale(0);
 
@@ -351,8 +352,9 @@ describe("Gotchiswap", function () {
       );
       expect(await gotchiswap.getBuyerOffersCount(owner.address)).to.equal(1);
       // test revert on bad index
-      await expect(gotchiswap.connect(testAdmin).abortSale(1))
-        .to.be.revertedWith("Gotchiswap: Index out of bound, no sale found");
+      await expect(
+        gotchiswap.connect(testAdmin).abortSale(1)
+      ).to.be.revertedWith("Gotchiswap: Index out of bound, no sale found");
       await gotchiswap.connect(testAdmin).abortSale(0);
       // check that the gotchi is returned to the owner
       expect(await aavegotchi.balanceOf(gotchiswap.target)).to.equal(0);
@@ -364,13 +366,8 @@ describe("Gotchiswap", function () {
   });
   describe("External view functions", function () {
     it("Should be able to retrieve sale details from buyer", async function () {
-      const {
-        gotchiswap,
-        GhstAddress,
-        AavegotchiAddress,
-        owner,
-        testAdmin,
-      } = await loadFixture(deployGotchiswapFixture);
+      const { gotchiswap, GhstAddress, AavegotchiAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
       // create dummy sales
       await gotchiswap
         .connect(testAdmin)
@@ -416,7 +413,9 @@ describe("Gotchiswap", function () {
       await gotchiswap.connect(testAdmin).abortSale(0);
 
       // check sales have registered for both buyer and seller
-      expect(await gotchiswap.getSellerSalesCount(testAdmin.address)).to.equal(2);
+      expect(await gotchiswap.getSellerSalesCount(testAdmin.address)).to.equal(
+        2
+      );
       expect(await gotchiswap.getBuyerOffersCount(owner.address)).to.equal(1);
 
       // retrieve sale details

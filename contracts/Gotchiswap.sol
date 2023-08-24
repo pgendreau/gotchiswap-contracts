@@ -77,15 +77,23 @@ contract Gotchiswap is
     mapping(address => bool) contractsAllowlist;
 
     // Events
-    event CreateSale(address indexed seller, Asset[] assets, Asset[] prices, address indexed _buyer);
+    event CreateSale(
+        address indexed seller,
+        Asset[] assets,
+        Asset[] prices,
+        address indexed _buyer
+    );
     event ConcludeSale(address indexed buyer, Sale sale);
     event AbortSale(address indexed seller, Sale sale);
 
     /**
      * @dev Modifier that only allows the admin to perform certain functions.
      */
-    modifier onlyAdmin {
-        require(msg.sender == adminAddress, "Gotchiswap: Only the admin can perform this action");
+    modifier onlyAdmin() {
+        require(
+            msg.sender == adminAddress,
+            "Gotchiswap: Only the admin can perform this action"
+        );
         _;
     }
 
@@ -98,7 +106,7 @@ contract Gotchiswap is
      * @dev Initializes the contract with the admin address.
      * @param _admin Address of the admin who can perform certain actions.
      */
-    function initialize(address _admin) initializer external {
+    function initialize(address _admin) external initializer {
         __ReentrancyGuard_init();
         adminAddress = _admin;
     }
@@ -119,8 +127,14 @@ contract Gotchiswap is
      * @dev Reverts if the contract is zero address or already allowed.
      */
     function allowContract(address _contract) public onlyAdmin {
-        require(_contract != address(0), "Gotchiswap: Invalid contract address");
-        require(!contractsAllowlist[_contract], "Gotchiswap: Address already allowed");
+        require(
+            _contract != address(0),
+            "Gotchiswap: Invalid contract address"
+        );
+        require(
+            !contractsAllowlist[_contract],
+            "Gotchiswap: Address already allowed"
+        );
         contractsAllowlist[_contract] = true;
     }
 
@@ -143,7 +157,10 @@ contract Gotchiswap is
      * @dev Reverts if the contract is already disallowed.
      */
     function disallowContract(address _contract) public onlyAdmin {
-        require(contractsAllowlist[_contract], "Gotchiswap: Address already disallowed");
+        require(
+            contractsAllowlist[_contract],
+            "Gotchiswap: Address already disallowed"
+        );
         contractsAllowlist[_contract] = false;
     }
 
@@ -153,7 +170,9 @@ contract Gotchiswap is
      * @notice Only the admin is allowed to call this function.
      * @dev Calls the 'disallowContract' function for each contract address.
      */
-    function disallowContracts(address[] calldata _contracts) external onlyAdmin {
+    function disallowContracts(
+        address[] calldata _contracts
+    ) external onlyAdmin {
         for (uint256 i = 0; i < _contracts.length; i++) {
             disallowContract(_contracts[i]);
         }
@@ -185,8 +204,14 @@ contract Gotchiswap is
      * @dev Reverts if admin address is invalid or the same.
      */
     function changeAdmin(address _admin) external onlyAdmin {
-        require(_admin != address(0), "Gotchiswap: Cannot change admin to an invalid address");
-        require(_admin != adminAddress, "Gotchiswap: Address already set as admin");
+        require(
+            _admin != address(0),
+            "Gotchiswap: Cannot change admin to an invalid address"
+        );
+        require(
+            _admin != adminAddress,
+            "Gotchiswap: Address already set as admin"
+        );
         adminAddress = _admin;
     }
 
@@ -205,7 +230,10 @@ contract Gotchiswap is
      * @param _contract The address of the contract for the ERC721 tokens to withdraw.
      * @param _tokenId The ID of the ERC721 token to be withdrawn.
      */
-    function rescueERC721(address _contract, uint256 _tokenId) external onlyAdmin {
+    function rescueERC721(
+        address _contract,
+        uint256 _tokenId
+    ) external onlyAdmin {
         transferERC721(address(this), adminAddress, _contract, _tokenId);
     }
 
@@ -215,8 +243,18 @@ contract Gotchiswap is
      * @param _tokenId The ID of the ERC1155 tokens to be withdrawn.
      * @param _amount The amount of tokens to be withdrawn.
      */
-    function rescueERC1155(address _contract, uint256 _tokenId, uint256 _amount) external onlyAdmin {
-        transferERC1155(address(this), adminAddress, _contract, _tokenId, _amount);
+    function rescueERC1155(
+        address _contract,
+        uint256 _tokenId,
+        uint256 _amount
+    ) external onlyAdmin {
+        transferERC1155(
+            address(this),
+            adminAddress,
+            _contract,
+            _tokenId,
+            _amount
+        );
     }
 
     /**
@@ -224,7 +262,10 @@ contract Gotchiswap is
      * @param _contract The address of the ERC20 contract.
      * @param _amount The amount of tokens to be withdrawn.
      */
-    function rescueERC20(address _contract, uint256 _amount) external onlyAdmin {
+    function rescueERC20(
+        address _contract,
+        uint256 _amount
+    ) external onlyAdmin {
         transferERC20(address(this), adminAddress, _contract, _amount);
     }
 
@@ -263,18 +304,24 @@ contract Gotchiswap is
     ) external nonReentrant {
         // Verify for valid input
         require(_buyer != address(0), "Gotchiswap: Invalid buyer address");
-        require(_assetClasses.length > 0, "Gotchiswap: Assets list cannot be empty");
-        require(_priceClasses.length > 0, "Gotchiswap: Prices list cannot be empty");
+        require(
+            _assetClasses.length > 0,
+            "Gotchiswap: Assets list cannot be empty"
+        );
+        require(
+            _priceClasses.length > 0,
+            "Gotchiswap: Prices list cannot be empty"
+        );
         require(
             _assetClasses.length == _assetContracts.length &&
-            _assetClasses.length == _assetIds.length &&
-            _assetClasses.length == _assetAmounts.length,
+                _assetClasses.length == _assetIds.length &&
+                _assetClasses.length == _assetAmounts.length,
             "Gotchiswap: Assets parameters length should all be the same"
         );
         require(
             _priceClasses.length == _priceContracts.length &&
-            _priceClasses.length == _priceIds.length &&
-            _priceClasses.length == _priceAmounts.length,
+                _priceClasses.length == _priceIds.length &&
+                _priceClasses.length == _priceAmounts.length,
             "Gotchiswap: Prices parameters length should all be the same"
         );
 
@@ -328,10 +375,10 @@ contract Gotchiswap is
      * @return id The ID of the offer.
      * @dev Reverts if buyer has no offers.
      */
-    function getOffer(address _buyer, uint256 _index) external view returns (
-        address seller,
-        uint256 id
-    ) {
+    function getOffer(
+        address _buyer,
+        uint256 _index
+    ) external view returns (address seller, uint256 id) {
         require(isBuyer(_buyer), "Gotchiswap: No offers found for the buyer");
         SaleRef memory offer = buyers[_buyer][_index];
         return (offer.seller, offer.id);
@@ -353,18 +400,25 @@ contract Gotchiswap is
      * @return buyer The address of the buyer.
      * @dev Reverts if seller has no active sales.
      */
-    function getSale(address _seller, uint256 _index) external view returns (
-        uint256 id,
-        AssetClass[] memory assetClasses,
-        address[] memory assetContracts,
-        uint256[] memory assetIds,
-        uint256[] memory assetAmounts,
-        AssetClass[] memory priceClasses,
-        address[] memory priceContracts,
-        uint256[] memory priceIds,
-        uint256[] memory priceAmounts,
-        address buyer
-    ) {
+    function getSale(
+        address _seller,
+        uint256 _index
+    )
+        external
+        view
+        returns (
+            uint256 id,
+            AssetClass[] memory assetClasses,
+            address[] memory assetContracts,
+            uint256[] memory assetIds,
+            uint256[] memory assetAmounts,
+            AssetClass[] memory priceClasses,
+            address[] memory priceContracts,
+            uint256[] memory priceIds,
+            uint256[] memory priceAmounts,
+            address buyer
+        )
+    {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
         Sale memory sale = sellers[_seller][_index];
 
@@ -416,9 +470,13 @@ contract Gotchiswap is
      * @param _index The index of the sale in the seller's sale list.
      * @dev The index will typically come from getOffer result
      */
-    function getSaleId(address _seller, uint256 _index) external view returns (uint256 id) {
+    function getSaleId(
+        address _seller,
+        uint256 _index
+    ) external view returns (uint256 id) {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
-        require(_index < sellers[_seller].length,
+        require(
+            _index < sellers[_seller].length,
             "Gotchiswap: Index out of bound, no sale found"
         );
         return sellers[_seller][_index].id;
@@ -430,7 +488,10 @@ contract Gotchiswap is
      * @param _id The ID of the sale.
      * @return index The index of the sale in the seller's sales list.
      */
-    function getSaleIndex(address _seller, uint256 _id) public view returns (uint256 index) {
+    function getSaleIndex(
+        address _seller,
+        uint256 _id
+    ) public view returns (uint256 index) {
         for (uint i = 0; i < sellers[_seller].length; i++) {
             if (sellers[_seller][i].id == _id) {
                 return i;
@@ -445,7 +506,9 @@ contract Gotchiswap is
      * @return The number of active offers available to a buyer.
      * @dev Reverts if buyer has no offers.
      */
-    function getBuyerOffersCount(address _buyer) external view returns (uint256) {
+    function getBuyerOffersCount(
+        address _buyer
+    ) external view returns (uint256) {
         require(isBuyer(_buyer), "Gotchiswap: No offers found for the buyer");
         return buyers[_buyer].length;
     }
@@ -456,7 +519,9 @@ contract Gotchiswap is
      * @return The number of active sales made by the seller.
      * @dev Reverts if seller has no active sales.
      */
-    function getSellerSalesCount(address _seller) external view returns (uint256) {
+    function getSellerSalesCount(
+        address _seller
+    ) external view returns (uint256) {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
         return sellers[_seller].length;
     }
@@ -468,8 +533,12 @@ contract Gotchiswap is
      * @dev Reverts if _index is invalid.
      */
     function abortSale(uint256 _index) external nonReentrant {
-        require(isSeller(msg.sender), "Gotchiswap: No sales found for the seller");
-        require(_index < sellers[msg.sender].length,
+        require(
+            isSeller(msg.sender),
+            "Gotchiswap: No sales found for the seller"
+        );
+        require(
+            _index < sellers[msg.sender].length,
             "Gotchiswap: Index out of bound, no sale found"
         );
         // Get the sale to be aborted
@@ -491,8 +560,12 @@ contract Gotchiswap is
      * @dev Reverts if _index is invalid.
      */
     function concludeSale(uint256 _index) external nonReentrant {
-        require(isBuyer(msg.sender), "Gotchiswap: No offers found for the buyer");
-        require(_index < buyers[msg.sender].length,
+        require(
+            isBuyer(msg.sender),
+            "Gotchiswap: No offers found for the buyer"
+        );
+        require(
+            _index < buyers[msg.sender].length,
             "Gotchiswap: Index out of bound, no offer found"
         );
 
@@ -526,13 +599,18 @@ contract Gotchiswap is
      * @dev Reverts if a contract address is not in the allowlist and the allowlist is not disabled.
      * @dev Reverts if ERC20 tokenId is not 0 or ERC721 amount is not 1.
      */
-    function transferAssets(address _from, address _to, Asset[] memory _assets) private {
-
+    function transferAssets(
+        address _from,
+        address _to,
+        Asset[] memory _assets
+    ) private {
         require(_to != address(0), "Gotchiswap: Invalid destination address");
 
         for (uint256 i = 0; i < _assets.length; i++) {
-
-            require(_assets[i].addr != address(0), "Gotchiswap: Invalid contract address");
+            require(
+                _assets[i].addr != address(0),
+                "Gotchiswap: Invalid contract address"
+            );
 
             // Ensure that the contract address is either in the allowlist or allowlist is disabled
             require(
@@ -542,14 +620,26 @@ contract Gotchiswap is
 
             if (_assets[i].class == AssetClass.ERC721) {
                 // Transfer ERC721 token
-                require(_assets[i].qty == 1, "Gotchiswap: Amount for ERC721 token must be 1");
+                require(
+                    _assets[i].qty == 1,
+                    "Gotchiswap: Amount for ERC721 token must be 1"
+                );
                 transferERC721(_from, _to, _assets[i].addr, _assets[i].id);
             } else if (_assets[i].class == AssetClass.ERC1155) {
                 // Transfer ERC1155 token
-                transferERC1155(_from, _to, _assets[i].addr, _assets[i].id, _assets[i].qty);
+                transferERC1155(
+                    _from,
+                    _to,
+                    _assets[i].addr,
+                    _assets[i].id,
+                    _assets[i].qty
+                );
             } else if (_assets[i].class == AssetClass.ERC20) {
                 // Transfer ERC20 token
-                require(_assets[i].id == 0, "Gotchiswap: Id for ERC20 must be set to 0");
+                require(
+                    _assets[i].id == 0,
+                    "Gotchiswap: Id for ERC20 must be set to 0"
+                );
                 transferERC20(_from, _to, _assets[i].addr, _assets[i].qty);
             }
         }
@@ -568,12 +658,7 @@ contract Gotchiswap is
         address _tokenAddress,
         uint256 _tokenId
     ) private {
-        ERC721(_tokenAddress).safeTransferFrom(
-            _from,
-            _to,
-            _tokenId,
-            ""
-        );
+        ERC721(_tokenAddress).safeTransferFrom(_from, _to, _tokenId, "");
     }
 
     /**
@@ -614,11 +699,7 @@ contract Gotchiswap is
         uint256 _amount
     ) private {
         if (_from == address(this)) {
-            SafeERC20.safeTransfer(
-                IERC20(_tokenAddress),
-                _to,
-                _amount
-            );
+            SafeERC20.safeTransfer(IERC20(_tokenAddress), _to, _amount);
         } else {
             SafeERC20.safeTransferFrom(
                 IERC20(_tokenAddress),
@@ -651,7 +732,6 @@ contract Gotchiswap is
         Asset[] memory _prices,
         address _buyer
     ) private {
-
         // Add the sale to the seller's sales list
         uint256 id = getNextSaleId();
 
@@ -661,10 +741,10 @@ contract Gotchiswap is
         // Fill in the values
         sale.id = id;
         for (uint256 i = 0; i < _assets.length; i++) {
-           sale.assets.push(_assets[i]);
+            sale.assets.push(_assets[i]);
         }
         for (uint256 i = 0; i < _prices.length; i++) {
-           sale.prices.push(_prices[i]);
+            sale.prices.push(_prices[i]);
         }
         sale.buyer = _buyer;
 
@@ -678,7 +758,7 @@ contract Gotchiswap is
      * @param _index The index of the sale to be removed.
      * @dev Reverts if seller has no active sales.
      */
-    function removeSale(address _seller, uint256 _index ) private {
+    function removeSale(address _seller, uint256 _index) private {
         require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
 
         // Get the buyer and Aavegotchi ID for the sale to be removed
