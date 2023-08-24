@@ -7,7 +7,6 @@ const { expect } = require("chai");
 const aavegotchi_abi = require("./aavegotchi.json");
 const erc20_abi = require("./erc20.json");
 const wearables_abi = require("./wearables.json");
-//const { ethers, upgrades } = require("hardhat");
 
 const hre = require("hardhat");
 
@@ -196,6 +195,9 @@ describe("Gotchiswap", function () {
       // should expect
       //console.log("sale: ", sale);
 
+      // test wrong offer index
+      await expect(gotchiswap.connect(testAdmin).concludeSale(1))
+        .to.be.revertedWith('Gotchiswap: Index out of bound, no offer found');
       // complete the trade
       await gotchiswap.connect(testAdmin).concludeSale(0);
 

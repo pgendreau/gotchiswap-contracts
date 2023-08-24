@@ -98,9 +98,7 @@ contract Gotchiswap is
      * @dev Initializes the contract with the admin address.
      * @param _admin Address of the admin who can perform certain actions.
      */
-    function initialize(
-        address _admin
-    ) initializer external {
+    function initialize(address _admin) initializer external {
         __ReentrancyGuard_init();
         adminAddress = _admin;
     }
@@ -413,6 +411,35 @@ contract Gotchiswap is
     }
 
     /**
+     * @dev Retrieve a seller's sale ID from it's index.
+     * @param _seller The address of the seller.
+     * @param _index The index of the sale in the seller's sale list.
+     * @dev The index will typically come from getOffer result
+     */
+    function getSaleId(address _seller, uint256 _index) external view returns (uint256) {
+        require(isSeller(_seller), "Gotchiswap: No sales found for the seller");
+        require(_index < sellers[_seller].length,
+            "Gotchiswap: Index out of bound, no sale found"
+        );
+        return sellers[_seller][_index].id;
+    }
+
+    /**
+     * @dev Private function to get the index of a sale in the seller's sales list.
+     * @param _seller The address of the seller.
+     * @param _id The ID of the sale.
+     * @return index The index of the sale in the seller's sales list.
+     */
+    function getSaleIndex(address _seller, uint256 _id) public view returns (uint256 index) {
+        for (uint i = 0; i < sellers[_seller].length; i++) {
+            if (sellers[_seller][i].id == _id) {
+                return i;
+            }
+        }
+        revert("Gotchiswap: Sale not found");
+    }
+
+    /**
      * @dev Gets the number of offers made to a specific buyer.
      * @param _buyer The address of the buyer.
      * @return The number of active offers available to a buyer.
@@ -606,23 +633,8 @@ contract Gotchiswap is
      * @dev Private function to get a unique ID for each sale.
      * @return A unique sale ID.
      */
-    function getSaleId() private returns (uint256) {
+    function getNextSaleId() private returns (uint256) {
         return saleId++;
-    }
-
-    /**
-     * @dev Private function to get the index of a sale in the seller's sales list.
-     * @param _seller The address of the seller.
-     * @param _id The ID of the sale.
-     * @return index The index of the sale in the seller's sales list.
-     */
-    function getSaleIndex(address _seller, uint256 _id) private view returns (uint256 index) {
-        for (uint i = 0; i < sellers[_seller].length; i++) {
-            if (sellers[_seller][i].id == _id) {
-                return i;
-            }
-        }
-        revert("Gotchiswap: Sale not found");
     }
 
     /**
@@ -641,7 +653,7 @@ contract Gotchiswap is
     ) private {
 
         // Add the sale to the seller's sales list
-        uint256 id = getSaleId();
+        uint256 id = getNextSaleId();
 
         // Create an empty space in the sellers mapping
         Sale storage sale = sellers[_seller].push();
