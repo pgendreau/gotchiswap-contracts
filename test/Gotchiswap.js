@@ -364,6 +364,137 @@ describe("Gotchiswap", function () {
       expect(await aavegotchi.ownerOf(4895)).to.equal(testAdmin.address);
     });
   });
+  describe("Input requirements", function () {
+    it("Should revert if amount is 0", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895],
+            [1],
+            [0],
+            [GhstAddress],
+            [0],
+            [0n],
+            owner.address
+          )
+      ).to.be.revertedWith("Gotchiswap: Amount must be greater than 0");
+    });
+    it("Should revert if ERC721 amount is not 1", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895],
+            [99],
+            [0],
+            [GhstAddress],
+            [0],
+            [100000000000000000000n],
+            owner.address
+          )
+      ).to.be.revertedWith("Gotchiswap: Amount for ERC721 token must be 1");
+    });
+    it("Should revert if buyer address is not valid", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895],
+            [1],
+            [0],
+            [GhstAddress],
+            [0],
+            [100000000000000000000n],
+            ADDRESS_ZERO
+          )
+      ).to.be.revertedWith("Gotchiswap: Invalid buyer address");
+    });
+    it("Should revert if arrays are not the same length", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895, 9121],
+            [1],
+            [0],
+            [GhstAddress],
+            [0],
+            [100000000000000000000n],
+            owner.address
+          )
+      ).to.be.revertedWith("Gotchiswap: Assets parameters length should all be the same");
+    });
+    it("Should revert if arrays are empty", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [],
+            [],
+            [],
+            [],
+            [0],
+            [GhstAddress],
+            [0],
+            [100000000000000000000n],
+            owner.address
+          )
+      ).to.be.revertedWith("Gotchiswap: Assets list cannot be empty");
+      await expect(
+        gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895, 9121],
+            [1],
+            [],
+            [],
+            [],
+            [],
+            owner.address
+          )
+      ).to.be.revertedWith("Gotchiswap: Prices list cannot be empty");
+    });
+    it("Should revert if ERC20 id is not 0", async function () {
+      const { gotchiswap, AavegotchiAddress, GhstAddress, owner, testAdmin } =
+        await loadFixture(deployGotchiswapFixture);
+      await gotchiswap
+          .connect(testAdmin)
+          .createSale(
+            [2],
+            [AavegotchiAddress],
+            [4895],
+            [1],
+            [0],
+            [GhstAddress],
+            [99],
+            [100000000000000000000n],
+            owner.address
+          );
+      await expect(gotchiswap.concludeSale(0))
+        .to.be.revertedWith("Gotchiswap: Id for ERC20 must be set to 0");
+    });
+  });
   describe("External view functions", function () {
     it("Should be able to retrieve sale details from buyer", async function () {
       const { gotchiswap, GhstAddress, AavegotchiAddress, owner, testAdmin } =

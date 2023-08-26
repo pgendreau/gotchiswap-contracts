@@ -280,7 +280,7 @@ contract Gotchiswap is
      *      - 2: ERC721
      *      The 4 arrays for each side need to be of the same length.
      *      ERC721 amount must be 1.
-     *      ERC20 id must be 0.
+     *      ERC20 ID must be 0.
      * @param _assetClasses Classes of the assets being traded.
      * @param _assetContracts Addresses of the asset contracts.
      * @param _assetIds IDs of the asset tokens.
@@ -290,7 +290,9 @@ contract Gotchiswap is
      * @param _priceIds IDs of the price tokens.
      * @param _priceAmounts Amounts of the price tokens.
      * @param _buyer The address of the buyer.
-     * @dev Reverts for arry of 0 length.
+     * @dev Reverts on invalid buyer address.
+     * @dev Reverts for array of 0 length.
+     * @dev Reverts for 0 amounts.
      */
     function createSale(
         AssetClass[] memory _assetClasses,
@@ -331,6 +333,11 @@ contract Gotchiswap is
         Asset[] memory prices = new Asset[](_priceClasses.length);
 
         for (uint256 i = 0; i < _assetClasses.length; i++) {
+            require(
+                _assetAmounts[i] > 0,
+                "Gotchiswap: Amount must be greater than 0"
+            );
+
             // create a new instance at each loop
             Asset memory asset;
 
@@ -345,6 +352,11 @@ contract Gotchiswap is
         }
 
         for (uint256 i = 0; i < _priceClasses.length; i++) {
+            require(
+                _priceAmounts[i] > 0,
+                "Gotchiswap: Amount must be greater than 0"
+            );
+
             // create a new instance at each loop
             Asset memory price;
 
