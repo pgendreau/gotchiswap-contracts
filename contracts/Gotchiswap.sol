@@ -79,6 +79,7 @@ contract Gotchiswap is
     // Events
     event CreateSale(
         address indexed seller,
+        uint256 indexed id,
         Asset[] assets,
         Asset[] prices,
         address indexed _buyer
@@ -360,11 +361,14 @@ contract Gotchiswap is
         // Transfer the seller's assets to the contract first
         transferAssets(msg.sender, address(this), assets);
 
+        // Get the next available ID
+        uint256 id = getNextSaleId();
+
         // Add the sale to the seller's sales list and the buyer's offers list
         // pass the in-memory objects to be stored in the state variable
-        addSale(msg.sender, assets, prices, _buyer);
+        addSale(msg.sender, id, assets, prices, _buyer);
 
-        emit CreateSale(msg.sender, assets, prices, _buyer);
+        emit CreateSale(msg.sender, id, assets, prices, _buyer);
     }
 
     /**
@@ -728,18 +732,16 @@ contract Gotchiswap is
      */
     function addSale(
         address _seller,
+        uint256 _id,
         Asset[] memory _assets,
         Asset[] memory _prices,
         address _buyer
     ) private {
-        // Add the sale to the seller's sales list
-        uint256 id = getNextSaleId();
-
         // Create an empty space in the sellers mapping
         Sale storage sale = sellers[_seller].push();
 
         // Fill in the values
-        sale.id = id;
+        sale.id = _id;
         for (uint256 i = 0; i < _assets.length; i++) {
             sale.assets.push(_assets[i]);
         }
@@ -749,7 +751,7 @@ contract Gotchiswap is
         sale.buyer = _buyer;
 
         // Add a reference to the sale in the buyer's offers list
-        buyers[_buyer].push(SaleRef(_seller, id));
+        buyers[_buyer].push(SaleRef(_seller, _id));
     }
 
     /**

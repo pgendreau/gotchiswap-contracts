@@ -184,6 +184,12 @@
         "type": "address"
       },
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
         "components": [
           {
             "internalType": "enum Gotchiswap.AssetClass",
