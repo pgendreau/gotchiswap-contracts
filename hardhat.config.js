@@ -15,8 +15,6 @@ module.exports = {
   },
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-    },
     polygon_mumbai: {
       url: "https://rpc.ankr.com/polygon_mumbai",
       accounts: [process.env.PRIVATE_KEY]
@@ -27,13 +25,15 @@ module.exports = {
     },
     localhost: {
       forking: {
-        url: `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+        url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_API_KEY}`,
+        //url: `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
       }
     },
     hardhat: {
       forking: {
+        //url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_API_KEY}`,
         url: `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-        blockNumber: 45494291
+        //blockNumber: 46397958
       }
     }
   },
